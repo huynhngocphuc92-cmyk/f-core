@@ -1,4 +1,4 @@
-# CLAUDE.md - HubSpot Demo Project Rules
+# CLAUDE.md - F-CORE Project Rules
 
 ## CRITICAL RULES
 
@@ -20,6 +20,18 @@
 | `supabase` | Database operations (PostgreSQL) | stdio |
 | `git` | Git operations | stdio |
 | `thinking` | Sequential thinking/complex reasoning | stdio |
+
+### 3. Plugins Installed (2 plugins)
+| Plugin | Version | Chức năng |
+|--------|---------|-----------|
+| `sales@knowledge-work-plugins` | 1.0.0 | Sales CRM, pipeline, call prep |
+| `product-management@knowledge-work-plugins` | 1.0.0 | Product specs, roadmaps, user research |
+
+**Slash Commands:**
+- `/sales:call-prep` - Chuẩn bị cuộc gọi sales
+- `/sales:pipeline` - Quản lý sales pipeline
+- `/product:spec` - Viết product specification
+- `/product:roadmap` - Lập product roadmap
 
 ---
 
@@ -82,14 +94,18 @@ figma-mcp (design) → ui-ux (tokens) → supabase (backend) → git (version)
 
 ---
 
-### 3. Skills Available
+### 4. Skills Available
 - `apify-ultimate-scraper`: Web scraping
 - `browser-use`: Browser automation
 - `implement-design`: Design implementation
 - `research`: Research tasks
 - `ux-researcher-designer`: UX research and design
+- `tailwind-design-system`: Build scalable design systems
+- `vercel-react-best-practices`: React/Next.js performance optimization
 
 ## Project Structure
-- Next.js project with TypeScript
-- Tailwind CSS for styling
-- Located at `/Users/chong/hubspot-demo`
+- **Framework:** Next.js 16 with TypeScript
+- **Styling:** Tailwind CSS v4
+- **Database:** Supabase (PostgreSQL)
+- **Brand:** F-CORE (Ocean Blue theme #0891b2)
+- **Location:** `/Users/chong/hubspot-demo`
