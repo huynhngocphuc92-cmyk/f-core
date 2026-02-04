@@ -14,13 +14,14 @@
 |--------|-----------|--------|
 | `hubspot-db` | PostgreSQL database queries | ✅ Active |
 | `filesystem` | File operations trong project | ✅ Active |
-| `github` | GitHub API (PR, issues) | ⚠️ Cần auth |
+| `github` | GitHub API (PR, issues) | ✅ Active |
 | `tavily` | Web search, research | ✅ Active |
 | `memory` | Persistent memory across sessions | ✅ Active |
 | `sequential-thinking` | Complex reasoning | ✅ Active |
 | `fetch` | HTTP requests | ✅ Active |
 
 **Config file:** `~/.mcp.json` và `/Users/chong/hubspot-demo/.mcp.json`
+**GitHub account:** huynhngocphuc92-cmyk
 
 ### 3. Plugins Installed (2 plugins)
 | Plugin | Version | Chức năng |
@@ -117,7 +118,9 @@ fetch (API call) → sequential-thinking (process) → hubspot-db (store) → me
 
 | File | Mục đích | Khi nào đọc |
 |------|----------|-------------|
+| `docs/MASTER_PLAN.md` | Kế hoạch tổng thể, roadmap, clone strategy | **ĐẦU MỖI PHIÊN** |
 | `docs/DEVELOPMENT_STRATEGY.md` | Chiến lược sử dụng Skills & MCP | Đầu mỗi phiên |
+| `docs/MCP_USAGE_PLAN.md` | Chi tiết sử dụng từng MCP | Khi cần MCP |
 | `docs/DESIGN_SYSTEM.md` | Design tokens, colors, typography | Khi code UI |
 | `docs/REACT_BEST_PRACTICES.md` | React patterns, performance | Khi code React |
 
