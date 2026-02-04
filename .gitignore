@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+
+# MCP config (contains secrets)
+.mcp.json
+
+# Agent files
+.agents/
+.claude/
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.gif

@@ -1,0 +1,409 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// CORE TABLES - F-CORE CRM
+// ============================================
+
+// Users & Authentication
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  avatarUrl     String?
+  tenantId      String
+  role          String    @default("member") // admin, manager, member
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  contacts      Contact[] @relation("ContactOwner")
+  companies     Company[] @relation("CompanyOwner")
+  deals         Deal[]    @relation("DealOwner")
+  activities    Activity[]
+
+  @@index([tenantId])
+  @@index([email])
+}
+
+// Multi-tenancy
+model Tenant {
+  id            String    @id @default(uuid())
+  name          String
+  domain        String?   @unique
+  plan          String    @default("free") // free, starter, professional, enterprise
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  users         User[]
+  contacts      Contact[]
+  companies     Company[]
+  deals         Deal[]
+  activities    Activity[]
+  pipelines     Pipeline[]
+}
+
+// ============================================
+// CRM CORE OBJECTS
+// ============================================
+
+model Contact {
+  id              String    @id @default(uuid())
+  tenantId        String
+
+  // Basic Info
+  email           String?
+  firstName       String?
+  lastName        String?
+  phone           String?
+  mobilePhone     String?
+
+  // CRM Fields
+  lifecycleStage  String?   @default("subscriber") // subscriber, lead, mql, sql, opportunity, customer, evangelist
+  leadStatus      String?   // new, open, in_progress, qualified, unqualified
+  ownerId         String?
+
+  // Additional Info
+  jobTitle        String?
+  department      String?
+  website         String?
+  linkedinUrl     String?
+  twitterHandle   String?
+
+  // Address
+  address         String?
+  city            String?
+  state           String?
+  country         String?
+  postalCode      String?
+
+  // Flexible properties (JSONB)
+  properties      Json      @default("{}")
+
+  // Audit
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  createdBy       String?
+  updatedBy       String?
+
+  // Relations
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  owner           User?     @relation("ContactOwner", fields: [ownerId], references: [id])
+  companies       ContactCompany[]
+  deals           DealContact[]
+  activities      Activity[]
+
+  @@index([tenantId])
+  @@index([email])
+  @@index([ownerId])
+  @@index([lifecycleStage])
+  @@index([deletedAt])
+}
+
+model Company {
+  id              String    @id @default(uuid())
+  tenantId        String
+
+  // Basic Info
+  name            String
+  domain          String?
+  description     String?
+  logoUrl         String?
+
+  // Company Details
+  industry        String?
+  type            String?   // prospect, partner, reseller, vendor, other
+  size            String?   // 1-10, 11-50, 51-200, 201-500, 501-1000, 1001-5000, 5001+
+  annualRevenue   Decimal?  @db.Decimal(15, 2)
+
+  // Contact Info
+  phone           String?
+  website         String?
+  linkedinUrl     String?
+
+  // Address
+  address         String?
+  city            String?
+  state           String?
+  country         String?
+  postalCode      String?
+
+  // CRM Fields
+  ownerId         String?
+  lifecycleStage  String?
+
+  // Flexible properties
+  properties      Json      @default("{}")
+
+  // Audit
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  createdBy       String?
+  updatedBy       String?
+
+  // Relations
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  owner           User?     @relation("CompanyOwner", fields: [ownerId], references: [id])
+  contacts        ContactCompany[]
+  deals           DealCompany[]
+  activities      Activity[]
+
+  @@index([tenantId])
+  @@index([domain])
+  @@index([ownerId])
+  @@index([deletedAt])
+}
+
+model Deal {
+  id              String    @id @default(uuid())
+  tenantId        String
+
+  // Basic Info
+  name            String
+  description     String?
+
+  // Deal Details
+  amount          Decimal?  @db.Decimal(15, 2)
+  currency        String    @default("USD")
+  closeDate       DateTime?
+
+  // Pipeline
+  pipelineId      String
+  stageId         String
+  probability     Int?      @default(0)
+
+  // CRM Fields
+  ownerId         String?
+  dealType        String?   // newbusiness, existingbusiness
+  priority        String?   // low, medium, high
+
+  // Flexible properties
+  properties      Json      @default("{}")
+
+  // Audit
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  closedAt        DateTime?
+  closedReason    String?   // won, lost
+  createdBy       String?
+  updatedBy       String?
+
+  // Relations
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  owner           User?     @relation("DealOwner", fields: [ownerId], references: [id])
+  pipeline        Pipeline  @relation(fields: [pipelineId], references: [id])
+  stage           PipelineStage @relation(fields: [stageId], references: [id])
+  contacts        DealContact[]
+  companies       DealCompany[]
+  activities      Activity[]
+
+  @@index([tenantId])
+  @@index([pipelineId])
+  @@index([stageId])
+  @@index([ownerId])
+  @@index([closeDate])
+  @@index([deletedAt])
+}
+
+// ============================================
+// ASSOCIATIONS (Many-to-Many)
+// ============================================
+
+model ContactCompany {
+  contactId   String
+  companyId   String
+  isPrimary   Boolean   @default(false)
+  role        String?   // employee, owner, decision_maker, etc
+  createdAt   DateTime  @default(now())
+
+  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, companyId])
+}
+
+model DealContact {
+  dealId      String
+  contactId   String
+  role        String?   // decision_maker, influencer, blocker, champion
+  createdAt   DateTime  @default(now())
+
+  deal        Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@id([dealId, contactId])
+}
+
+model DealCompany {
+  dealId      String
+  companyId   String
+  isPrimary   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  deal        Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@id([dealId, companyId])
+}
+
+// ============================================
+// ACTIVITIES & TIMELINE
+// ============================================
+
+model Activity {
+  id              String    @id @default(uuid())
+  tenantId        String
+
+  // Activity Type
+  type            String    // email, call, meeting, note, task
+
+  // Content
+  subject         String?
+  body            String?   @db.Text
+
+  // Associations
+  contactId       String?
+  companyId       String?
+  dealId          String?
+  ownerId         String?
+
+  // Task-specific
+  dueDate         DateTime?
+  priority        String?   // low, medium, high
+  status          String?   // pending, completed, cancelled
+  completedAt     DateTime?
+
+  // Call-specific
+  callDuration    Int?      // seconds
+  callOutcome     String?   // connected, left_voicemail, no_answer, busy
+  callDirection   String?   // inbound, outbound
+
+  // Meeting-specific
+  meetingStart    DateTime?
+  meetingEnd      DateTime?
+  meetingLocation String?
+  attendees       Json?     // Array of attendee emails
+
+  // Email-specific
+  emailTo         String?
+  emailCc         String?
+  emailBcc        String?
+  emailStatus     String?   // sent, delivered, opened, clicked, bounced
+
+  // Metadata
+  metadata        Json      @default("{}")
+
+  // Audit
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  owner           User?     @relation(fields: [ownerId], references: [id])
+  contact         Contact?  @relation(fields: [contactId], references: [id])
+  company         Company?  @relation(fields: [companyId], references: [id])
+  deal            Deal?     @relation(fields: [dealId], references: [id])
+
+  @@index([tenantId])
+  @@index([type])
+  @@index([contactId])
+  @@index([companyId])
+  @@index([dealId])
+  @@index([ownerId])
+  @@index([createdAt(sort: Desc)])
+  @@index([dueDate])
+}
+
+// ============================================
+// PIPELINE CONFIGURATION
+// ============================================
+
+model Pipeline {
+  id          String    @id @default(uuid())
+  tenantId    String
+
+  name        String
+  description String?
+  isDefault   Boolean   @default(false)
+  isActive    Boolean   @default(true)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  stages      PipelineStage[]
+  deals       Deal[]
+
+  @@index([tenantId])
+  @@index([isDefault])
+}
+
+model PipelineStage {
+  id          String    @id @default(uuid())
+  pipelineId  String
+
+  name        String
+  orderIndex  Int       @default(0)
+  probability Int       @default(0) // 0-100
+  color       String?   // hex color for UI
+
+  isClosed    Boolean   @default(false)
+  isWon       Boolean   @default(false)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  pipeline    Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  deals       Deal[]
+
+  @@index([pipelineId])
+  @@index([orderIndex])
+}
+
+// ============================================
+// PROPERTY DEFINITIONS (Custom Fields)
+// ============================================
+
+model PropertyDefinition {
+  id          String    @id @default(uuid())
+  tenantId    String
+
+  objectType  String    // contact, company, deal
+  name        String    // internal name (snake_case)
+  label       String    // display label
+  description String?
+
+  fieldType   String    // text, number, date, datetime, select, multiselect, checkbox, email, phone, url
+  options     Json?     // For select/multiselect: [{value, label}]
+
+  isRequired  Boolean   @default(false)
+  isReadonly  Boolean   @default(false)
+  isSystem    Boolean   @default(false) // System fields can't be deleted
+
+  groupName   String?   // Property group for organization
+  orderIndex  Int       @default(0)
+
+  defaultValue String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([tenantId, objectType, name])
+  @@index([tenantId, objectType])
+}
