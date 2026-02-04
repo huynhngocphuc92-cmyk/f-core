@@ -8,18 +8,19 @@
 - This rule exists to prevent context limit issues
 - Use text-based descriptions instead of visual references
 
-### 2. MCP Servers Available (9 servers)
-| Server | Chức năng | Type |
-|--------|-----------|------|
-| `figma-mcp` | Figma design access | stdio |
-| `tavily` | Web search | stdio |
-| `apify` | Web scraping (RAG web browser) | stdio |
-| `browser-use` | Browser automation cloud | HTTP |
-| `ui-ux` | UI/UX design (colors, typography, Tailwind, Shadcn) | stdio |
-| `context` | Code context, memory, ~75% token reduction | stdio |
-| `supabase` | Database operations (PostgreSQL) | stdio |
-| `git` | Git operations | stdio |
-| `thinking` | Sequential thinking/complex reasoning | stdio |
+### 2. MCP Servers Configured (7 servers)
+
+| Server | Chức năng | Status |
+|--------|-----------|--------|
+| `hubspot-db` | PostgreSQL database queries | ✅ Active |
+| `filesystem` | File operations trong project | ✅ Active |
+| `github` | GitHub API (PR, issues) | ⚠️ Cần auth |
+| `tavily` | Web search, research | ✅ Active |
+| `memory` | Persistent memory across sessions | ✅ Active |
+| `sequential-thinking` | Complex reasoning | ✅ Active |
+| `fetch` | HTTP requests | ✅ Active |
+
+**Config file:** `~/.mcp.json` và `/Users/chong/hubspot-demo/.mcp.json`
 
 ### 3. Plugins Installed (2 plugins)
 | Plugin | Version | Chức năng |
@@ -40,56 +41,54 @@
 ### Phase 1: Research & Planning
 | Task | MCP to use |
 |------|------------|
-| Tìm hiểu requirements | `tavily` + `thinking` |
-| Research UI/UX patterns | `tavily` + `ui-ux` |
-| Phân tích design từ Figma | `figma-mcp` |
-| Scrape competitor websites | `apify` + `browser-use` |
+| Tìm hiểu requirements | `tavily` + `sequential-thinking` |
+| Research UI/UX patterns | `tavily` + `fetch` |
+| Lưu context quan trọng | `memory` |
 
 ### Phase 2: Design & Architecture
 | Task | MCP to use |
 |------|------------|
-| Lên kế hoạch phức tạp | `thinking` (sequential reasoning) |
-| Thiết kế UI components | `ui-ux` + `figma-mcp` |
-| Thiết kế database schema | `supabase` |
-| Quản lý code context | `context` |
+| Lên kế hoạch phức tạp | `sequential-thinking` |
+| Thiết kế database schema | `hubspot-db` |
+| Quản lý files | `filesystem` |
 
 ### Phase 3: Development
 | Task | MCP to use |
 |------|------------|
-| CRUD operations | `supabase` |
-| Styling với Tailwind/Shadcn | `ui-ux` |
-| Giữ context khi code dài | `context` |
-| Git commit/branch | `git` |
+| Database queries | `hubspot-db` |
+| File operations | `filesystem` |
+| Fetch external APIs | `fetch` |
+| Store knowledge | `memory` |
 
-### Phase 4: Testing & Automation
+### Phase 4: Testing & Deployment
 | Task | MCP to use |
 |------|------------|
-| E2E testing | `browser-use` |
-| Automated workflows | `browser-use` + `apify` |
-| Debug complex issues | `thinking` |
+| Check data integrity | `hubspot-db` |
+| Create PR/issues | `github` |
+| Debug complex issues | `sequential-thinking` |
 
 ---
 
 ## WORKFLOW COMBINATIONS
 
-### 1. Clone UI từ website
+### 1. Research & Document
 ```
-apify (scrape) → ui-ux (analyze) → figma-mcp (compare) → code
+tavily (search) → sequential-thinking (analyze) → memory (store) → implement
 ```
 
 ### 2. Build feature mới
 ```
-thinking (plan) → supabase (schema) → ui-ux (design) → git (commit)
+sequential-thinking (plan) → hubspot-db (schema) → filesystem (code) → github (PR)
 ```
 
-### 3. Research & Implement
+### 3. Debug database issues
 ```
-tavily (search) → context (store) → thinking (analyze) → implement
+hubspot-db (query) → sequential-thinking (analyze) → filesystem (fix) → hubspot-db (verify)
 ```
 
-### 4. Full-stack development
+### 4. Fetch & Process external data
 ```
-figma-mcp (design) → ui-ux (tokens) → supabase (backend) → git (version)
+fetch (API call) → sequential-thinking (process) → hubspot-db (store) → memory (cache)
 ```
 
 ---
