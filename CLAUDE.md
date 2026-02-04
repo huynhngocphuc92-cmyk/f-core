@@ -109,3 +109,51 @@ figma-mcp (design) → ui-ux (tokens) → supabase (backend) → git (version)
 - **Database:** Supabase (PostgreSQL)
 - **Brand:** F-CORE (Ocean Blue theme #0891b2)
 - **Location:** `/Users/chong/hubspot-demo`
+
+---
+
+## MANDATORY REFERENCES
+
+> **QUAN TRỌNG:** Luôn đọc các file sau trước khi bắt đầu phiên làm việc mới!
+
+| File | Mục đích | Khi nào đọc |
+|------|----------|-------------|
+| `docs/DEVELOPMENT_STRATEGY.md` | Chiến lược sử dụng Skills & MCP | Đầu mỗi phiên |
+| `docs/DESIGN_SYSTEM.md` | Design tokens, colors, typography | Khi code UI |
+| `docs/REACT_BEST_PRACTICES.md` | React patterns, performance | Khi code React |
+
+---
+
+## QUICK START (Mỗi phiên mới)
+
+```bash
+# 1. Đọc strategy
+cat docs/DEVELOPMENT_STRATEGY.md
+
+# 2. Check task hiện tại
+# Xem Section IX trong DEVELOPMENT_STRATEGY.md
+
+# 3. Chọn workflow phù hợp
+# Xem Section V trong DEVELOPMENT_STRATEGY.md
+```
+
+---
+
+## SKILL QUICK REFERENCE
+
+| Cần làm gì | Dùng Skill/Command |
+|------------|-------------------|
+| Research feature | `/research "topic"` |
+| Clone UI | `/apify-ultimate-scraper` |
+| Design UX | `/ux-researcher-designer` |
+| Convert design → code | `/implement-design` |
+| E2E testing | `/browser-use` |
+| Write PRD | `/product-management:write-spec` |
+| Plan roadmap | `/product-management:roadmap-update` |
+| Sales prep | `/sales:call-prep` |
+
+---
+
+## CURRENT SPRINT
+
+> Sprint 1: Core CRM (Xem chi tiết tại `docs/DEVELOPMENT_STRATEGY.md` Section IX)
