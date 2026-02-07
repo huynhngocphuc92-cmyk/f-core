@@ -1,727 +1,470 @@
 # F-CORE MASTER PLAN
-> Version: 1.0
+> Version: 2.0
 > Project: F-CORE - HubSpot CRM Clone
-> Created: 2026-02-04
+> Updated: 2026-02-07
 > Status: ACTIVE
+> Research: `docs/research/master-plan-research/`
 
 ---
 
-## I. TẦM NHÌN & MỤC TIÊU
+## I. TAM NHIN & MUC TIEU
 
 ### Vision
-Xây dựng F-CORE thành một CRM platform hoàn chỉnh, clone 80% tính năng của HubSpot với UI/UX hiện đại, phù hợp cho thị trường Việt Nam và Đông Nam Á.
+Xay dung F-CORE thanh mot CRM platform hoan chinh, clone 80% tinh nang HubSpot voi UI/UX hien dai, modern tech stack (Next.js 16, Supabase), va chien luoc gia minh bach. Nham vao thi truong SMB/Mid-market tai Viet Nam va Dong Nam A.
 
-### Mục tiêu cụ thể
+### Core Identity (6 Pillars)
 
-| Giai đoạn | Mục tiêu | Timeline |
-|-----------|----------|----------|
-| MVP | Core CRM (Contacts, Companies, Deals) | Sprint 1-3 |
-| Phase 1 | Sales Hub hoàn chỉnh | Sprint 4-6 |
-| Phase 2 | Marketing Hub cơ bản | Sprint 7-9 |
-| Phase 3 | Service Hub | Sprint 10-12 |
-| Phase 4 | Advanced Features | Sprint 13+ |
+| # | Pillar | Description |
+|---|--------|-------------|
+| 1 | **All-in-one for free** | Free tier khong gioi han contacts, full CRUD, basic automation, khong branding |
+| 2 | **Modern by design** | Next.js 16, React 19, Supabase - khong phai legacy adapted |
+| 3 | **Open and transparent** | Open source, transparent pricing, self-hostable |
+| 4 | **AI from day 1** | AI tich hop vao moi workflow - summaries, suggestions, predictions |
+| 5 | **Developer-friendly** | API-first, webhook-first, extensible architecture |
+| 6 | **Pipeline-first UX** | Pipedrive's simplicity + HubSpot's breadth |
 
 ### Success Metrics
-- [ ] 100% responsive trên mobile/desktop
+- [ ] 100% responsive (mobile/tablet/desktop)
 - [ ] Page load < 2 seconds
 - [ ] Lighthouse score > 90
 - [ ] 0 critical security vulnerabilities
+- [ ] Multi-tenant data isolation verified
+- [ ] All CRM entities use soft delete
 
 ---
 
-## II. KIẾN TRÚC HUBSPOT CẦN CLONE
+## II. COMPETITIVE LANDSCAPE
 
-### A. 6 Product Hubs
+> Full analysis: `docs/research/master-plan-research/competitive-analysis.md`
+
+### HubSpot (Primary Clone Target)
+
+| Aspect | Details |
+|--------|---------|
+| **7 Hubs** | Marketing, Sales, Service, Content, Data, Commerce + Breeze AI |
+| **Free Tier** | 1,000 contacts, 2 users, 10 custom properties, 1 pipeline, no automation |
+| **Pricing** | $20-$3,600/mo, complex tiers, mandatory onboarding fees |
+| **Strength** | All-in-one platform, ease of use, inbound marketing |
+| **Weakness** | Pricing opacity, contact limits, branding on free tier |
+
+### Salesforce (Enterprise Reference)
+
+| Aspect | Details |
+|--------|---------|
+| **Market Share** | 19.5% (#1 overall) |
+| **Pricing** | $25-$500/user/mo, no free plan |
+| **Strength** | Extreme customization (Apex, Lightning), enterprise scale |
+| **Weakness** | Complex setup ($10K-$100K+ implementation), steep learning curve |
+
+### Pipedrive (UX Reference)
+
+| Aspect | Details |
+|--------|---------|
+| **Focus** | Sales pipeline management |
+| **Pricing** | $14-$79/user/mo, transparent per-user |
+| **Strength** | Pipeline visualization, simplicity, deal rotting feature |
+| **Weakness** | No marketing/service tools, limited customization |
+
+### F-CORE Differentiators
+
+| vs HubSpot | vs Salesforce | vs Pipedrive |
+|-----------|--------------|-------------|
+| No contact limit (free) | Free tier exists | All-in-one platform |
+| Transparent pricing | Setup in minutes | Custom objects/properties |
+| No branding (free) | Ease of use | Full dashboard builder |
+| Open source | All-in-one | Workflow automation |
+| Modern tech stack | Modern UX | Content management |
+
+---
+
+## III. KIEN TRUC HE THONG
+
+### A. Product Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        F-CORE CRM                           │
-├──────────┬──────────┬──────────┬──────────┬────────┬───────┤
-│ Marketing│  Sales   │ Service  │   CMS    │  Ops   │Commerce│
-│   Hub    │   Hub    │   Hub    │   Hub    │  Hub   │  Hub   │
-├──────────┴──────────┴──────────┴──────────┴────────┴───────┤
-│                    CORE CRM DATABASE                        │
-│         (Contacts, Companies, Deals, Activities)            │
-└─────────────────────────────────────────────────────────────┘
++---------------------------------------------------------+
+|                      F-CORE CRM                          |
++----------+--------+---------+--------+--------+---------+
+| Contacts | Compan | Deals   | Ticket | Activi | Settings|
+| Module   | ies    | Pipeline| Module | ties   | & Admin |
++----------+--------+---------+--------+--------+---------+
+|              CORE CRM DATABASE (Supabase)                |
+|    Contacts, Companies, Deals, Tickets, Activities       |
+|    Associations, Properties, Pipelines, Audit Log        |
++---------------------------------------------------------+
+|    Auth (Supabase Auth) | RLS (Multi-tenancy)            |
++---------------------------------------------------------+
 ```
 
 ### B. Core Objects Model
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  CONTACTS   │────▶│  COMPANIES  │────▶│    DEALS    │
-│             │     │             │     │             │
-│ - name      │     │ - name      │     │ - name      │
-│ - email     │     │ - domain    │     │ - amount    │
-│ - phone     │     │ - industry  │     │ - stage     │
-│ - lifecycle │     │ - size      │     │ - close_date│
-│ - owner     │     │ - owner     │     │ - pipeline  │
-└─────────────┘     └─────────────┘     └─────────────┘
-        │                   │                   │
-        └───────────────────┴───────────────────┘
-                            │
-                    ┌───────▼───────┐
-                    │  ACTIVITIES   │
-                    │               │
-                    │ - emails      │
-                    │ - calls       │
-                    │ - meetings    │
-                    │ - notes       │
-                    │ - tasks       │
-                    └───────────────┘
++-----------+     +-----------+     +-----------+
+| CONTACTS  |<--->| COMPANIES |<--->|   DEALS   |
+|           |     |           |     |           |
+| email     |     | name      |     | name      |
+| first_name|     | domain    |     | amount    |
+| last_name |     | industry  |     | stage     |
+| phone     |     | size      |     | close_date|
+| lifecycle |     | revenue   |     | pipeline  |
+| owner     |     | owner     |     | owner     |
++-----------+     +-----------+     +-----------+
+      |                 |                 |
+      +-----------------+-----------------+
+                        |
+                +-------v-------+     +-----------+
+                |  ACTIVITIES   |     |  TICKETS  |
+                |               |     |           |
+                | emails        |     | subject   |
+                | calls         |     | status    |
+                | meetings      |     | priority  |
+                | notes         |     | pipeline  |
+                | tasks         |     | SLA       |
+                +---------------+     +-----------+
 ```
 
-### C. Feature Priority Matrix
+### C. Tech Stack
 
-| Feature | Priority | Complexity | Hub |
-|---------|----------|------------|-----|
-| Contact CRUD | P0 | Low | Core |
-| Company CRUD | P0 | Low | Core |
-| Deal Pipeline | P0 | Medium | Sales |
-| Activity Timeline | P0 | Medium | Core |
-| Property System | P1 | High | Core |
-| Email Tracking | P1 | Medium | Sales |
-| Meeting Scheduler | P1 | Medium | Sales |
-| Workflow Automation | P2 | High | Ops |
-| Email Marketing | P2 | High | Marketing |
-| Ticketing System | P2 | Medium | Service |
-| Form Builder | P3 | Medium | Marketing |
-| Knowledge Base | P3 | Medium | Service |
-| Custom Reports | P3 | High | Core |
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| **Frontend** | Next.js (App Router) | 16 |
+| **UI Framework** | React + TypeScript (Strict) | 19 |
+| **Styling** | Tailwind CSS | v4 |
+| **UI Components** | shadcn/ui (Radix primitives) | Latest |
+| **Data Table** | TanStack Table | v8 |
+| **Drag & Drop** | dnd-kit | Latest |
+| **Forms** | React Hook Form + Zod | Latest |
+| **Server State** | TanStack Query | v5 |
+| **Client State** | Zustand | v5 |
+| **Charts** | Recharts | Latest |
+| **Rich Text** | Tiptap | Latest |
+| **Toasts** | Sonner | Latest |
+| **Icons** | Lucide React | Latest |
+| **Dates** | date-fns | v4 |
+| **Database** | Supabase (PostgreSQL) | Latest |
+| **Auth** | Supabase Auth + @supabase/ssr | Latest |
+| **Hosting** | Vercel | Latest |
+| **Theme** | Ocean Blue (#0891b2) | - |
 
 ---
 
-## III. CHIẾN LƯỢC SỬ DỤNG MCP & SKILLS
+## IV. DATABASE SCHEMA
 
-### A. MCP Mapping theo Task
+> Full schema details: `docs/research/master-plan-research/tech-research.md`
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    DEVELOPMENT WORKFLOW                      │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌─────────┐    ┌──────────┐    ┌──────────┐    ┌────────┐ │
-│  │ RESEARCH│───▶│  DESIGN  │───▶│   BUILD  │───▶│ DEPLOY │ │
-│  └────┬────┘    └────┬─────┘    └────┬─────┘    └───┬────┘ │
-│       │              │               │              │       │
-│  ┌────▼────┐    ┌────▼─────┐    ┌────▼─────┐   ┌───▼────┐  │
-│  │ tavily  │    │sequential│    │hubspot-db│   │ github │  │
-│  │ fetch   │    │-thinking │    │filesystem│   │        │  │
-│  │ memory  │    │ memory   │    │ fetch    │   │        │  │
-│  └─────────┘    └──────────┘    └──────────┘   └────────┘  │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+### A. Design Decisions
 
-### B. Chi tiết sử dụng từng MCP
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Property storage | Hybrid (fixed + JSONB) | Type safety for standard fields, flexibility for custom |
+| Multi-tenancy | Row-level with `tenant_id` + RLS | Native Supabase support, scales well |
+| Soft delete | `deleted_at TIMESTAMPTZ` | Data preservation, easy undo, audit compliance |
+| Relationships | Generic association table | Mirrors HubSpot's flexible linking system |
+| Pagination | Cursor-based `(created_at, id)` | O(1) at any depth |
+| Search | PostgreSQL tsvector + GIN | Full-text search without external service |
+| Audit | Trigger-based audit_log | Tamper-proof, automatic, partitioned by month |
 
-#### 1. `tavily` - Web Research
-```
-WHEN: Cần research HubSpot features, best practices, UI patterns
-HOW:  "Search HubSpot [feature] implementation"
-USE:
-  - Research competitor features
-  - Find UI/UX patterns
-  - Technical documentation
-  - Best practices
-```
-
-#### 2. `hubspot-db` - Database Operations
-```
-WHEN: Design schema, query data, debug issues
-HOW:  SQL queries trực tiếp
-USE:
-  - Design table structure
-  - Test queries before coding
-  - Seed test data
-  - Debug data issues
-  - EXPLAIN ANALYZE for optimization
-```
-
-#### 3. `filesystem` - File Operations
-```
-WHEN: Create/read/update project files
-HOW:  Read/write file operations
-USE:
-  - Create new components
-  - Update existing code
-  - Read project structure
-  - Manage configuration
-```
-
-#### 4. `github` - Version Control & Collaboration
-```
-WHEN: Code review, PR management, releases
-HOW:  GitHub API operations
-USE:
-  - Create branches
-  - Open PRs
-  - Review code
-  - Manage issues
-  - Create releases
-```
-
-#### 5. `memory` - Persistent Knowledge
-```
-WHEN: Store important context across sessions
-HOW:  Key-value storage
-USE:
-  - Store architecture decisions
-  - Remember user preferences
-  - Cache research findings
-  - Track progress
-```
-
-#### 6. `sequential-thinking` - Complex Analysis
-```
-WHEN: Complex problem solving, architecture decisions
-HOW:  Step-by-step reasoning
-USE:
-  - Design system architecture
-  - Debug complex issues
-  - Plan feature implementation
-  - Analyze trade-offs
-```
-
-#### 7. `fetch` - External API Calls
-```
-WHEN: Call external APIs, fetch resources
-HOW:  HTTP requests
-USE:
-  - Fetch API documentation
-  - Test external integrations
-  - Download resources
-```
-
-### C. Skills Mapping
-
-| Task | Skill | Command |
-|------|-------|---------|
-| Clone UI từ website | apify-ultimate-scraper | `/apify-ultimate-scraper` |
-| Browser automation | browser-use | `/browser-use` |
-| Convert design → code | implement-design | `/implement-design` |
-| Research topics | research | `/research "topic"` |
-| UX design | ux-researcher-designer | `/ux-researcher-designer` |
-| Design system | tailwind-design-system | Tự động áp dụng |
-| React optimization | vercel-react-best-practices | Tự động áp dụng |
-
-### D. Workflow Combinations
-
-#### Workflow 1: Clone HubSpot Feature
-```
-1. /research "HubSpot [feature] UI UX"
-   → Understand feature requirements
-
-2. /apify-ultimate-scraper
-   → Scrape UI patterns from HubSpot
-
-3. /ux-researcher-designer
-   → Adapt design for F-CORE
-
-4. sequential-thinking MCP
-   → Plan implementation
-
-5. hubspot-db MCP
-   → Design database schema
-
-6. /implement-design
-   → Convert to React components
-
-7. github MCP
-   → Create PR for review
-```
-
-#### Workflow 2: Build New Feature
-```
-1. tavily MCP
-   → Research best practices
-
-2. memory MCP
-   → Store requirements
-
-3. sequential-thinking MCP
-   → Design architecture
-
-4. hubspot-db MCP
-   → Create schema/migrations
-
-5. filesystem MCP
-   → Implement code
-
-6. github MCP
-   → Deploy
-```
-
-#### Workflow 3: Debug & Fix
-```
-1. hubspot-db MCP
-   → Query data, check state
-
-2. sequential-thinking MCP
-   → Analyze issue
-
-3. filesystem MCP
-   → Fix code
-
-4. hubspot-db MCP
-   → Verify fix
-
-5. github MCP
-   → Commit & PR
-```
-
----
-
-## IV. CHIẾN LƯỢC CLONE HUBSPOT
-
-### A. UI/UX Clone Strategy
-
-#### 1. Design System Extraction
-
-**HubSpot Design Tokens → F-CORE Tokens**
-
-| HubSpot | F-CORE | Variable |
-|---------|--------|----------|
-| Orange #ff4800 | Ocean Blue #0891b2 | --color-primary |
-| Navy #33475b | Gray #111827 | --color-text |
-| White #ffffff | White #ffffff | --color-bg |
-
-**Typography Mapping**
-```css
-/* HubSpot → F-CORE */
-HubSpot Sans → Inter
-H1: 40px/600 → 48px/700
-H2: 32px/600 → 36px/700
-Body: 16px/400 → 16px/400
-```
-
-#### 2. Component Clone Priority
-
-| Component | HubSpot Reference | Priority |
-|-----------|-------------------|----------|
-| DataTable | contacts/companies list | P0 |
-| Pipeline Board | deals pipeline | P0 |
-| Record Card | contact detail | P0 |
-| Activity Timeline | engagement feed | P0 |
-| Property Editor | inline editing | P1 |
-| Filter Panel | advanced filters | P1 |
-| Form Builder | forms tool | P2 |
-| Dashboard Widget | reporting | P2 |
-
-#### 3. Page Layout Patterns
-
-**List View Layout**
-```
-┌────────────────────────────────────────────────────┐
-│ Header: Title + Actions (Create, Import, Export)   │
-├────────────────────────────────────────────────────┤
-│ Filters: Quick filters + Advanced filters button   │
-├────────────────────────────────────────────────────┤
-│ Table/Board View                                   │
-│ - Columns: Checkbox, Avatar, Name, Email, ...      │
-│ - Actions: Hover actions, Bulk actions             │
-│ - Pagination: Infinite scroll or paginated         │
-├────────────────────────────────────────────────────┤
-│ Footer: Record count, Pagination controls          │
-└────────────────────────────────────────────────────┘
-```
-
-**Detail View Layout**
-```
-┌────────────────────────────────────────────────────┐
-│ Header: Back + Name + Actions (Edit, Delete, ...)  │
-├──────────────┬─────────────────────┬───────────────┤
-│ Left Panel   │   Center Panel      │ Right Panel   │
-│              │                     │               │
-│ - Avatar     │ - Activity Timeline │ - Associations│
-│ - Properties │ - Emails            │ - Companies   │
-│ - Lifecycle  │ - Calls             │ - Deals       │
-│ - Owner      │ - Meetings          │ - Tickets     │
-│              │ - Notes             │               │
-│              │ - Tasks             │               │
-└──────────────┴─────────────────────┴───────────────┘
-```
-
-**Pipeline Board Layout**
-```
-┌────────────────────────────────────────────────────┐
-│ Header: Pipeline selector + View options + Actions │
-├────────────────────────────────────────────────────┤
-│ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │
-│ │ Stage 1 │ │ Stage 2 │ │ Stage 3 │ │ Stage 4 │   │
-│ │ $50K    │ │ $120K   │ │ $80K    │ │ $200K   │   │
-│ ├─────────┤ ├─────────┤ ├─────────┤ ├─────────┤   │
-│ │ ┌─────┐ │ │ ┌─────┐ │ │ ┌─────┐ │ │ ┌─────┐ │   │
-│ │ │Deal1│ │ │ │Deal3│ │ │ │Deal5│ │ │ │Deal7│ │   │
-│ │ └─────┘ │ │ └─────┘ │ │ └─────┘ │ │ └─────┘ │   │
-│ │ ┌─────┐ │ │ ┌─────┐ │ │         │ │         │   │
-│ │ │Deal2│ │ │ │Deal4│ │ │         │ │         │   │
-│ │ └─────┘ │ │ └─────┘ │ │         │ │         │   │
-│ └─────────┘ └─────────┘ └─────────┘ └─────────┘   │
-└────────────────────────────────────────────────────┘
-```
-
-### B. Feature Clone Strategy
-
-#### Phase 1: Core CRM (MVP)
-
-**1.1 Contacts Module**
-```
-Features to clone:
-├── Contact List View
-│   ├── Table with sortable columns
-│   ├── Quick search
-│   ├── Advanced filters
-│   ├── Bulk actions
-│   └── Export to CSV
-├── Contact Detail View
-│   ├── Property editing
-│   ├── Activity timeline
-│   ├── Associations panel
-│   └── Owner assignment
-└── Contact Create/Edit
-    ├── Form with validation
-    ├── Duplicate detection
-    └── Auto-save draft
-```
-
-**1.2 Companies Module**
-```
-Features to clone:
-├── Company List View
-│   ├── Table/Card view toggle
-│   ├── Domain-based search
-│   └── Industry filters
-├── Company Detail View
-│   ├── Company properties
-│   ├── Associated contacts
-│   ├── Associated deals
-│   └── Activity feed
-└── Company Create/Edit
-    ├── Domain lookup
-    ├── Auto-fill from domain
-    └── Logo upload
-```
-
-**1.3 Deals Module**
-```
-Features to clone:
-├── Pipeline Board View
-│   ├── Drag-drop cards
-│   ├── Stage totals
-│   ├── Multiple pipelines
-│   └── Win probability
-├── Deal List View
-│   ├── Table with amount sorting
-│   ├── Close date filters
-│   └── Owner filters
-├── Deal Detail View
-│   ├── Deal properties
-│   ├── Stage history
-│   ├── Associated records
-│   └── Activity timeline
-└── Pipeline Settings
-    ├── Stage configuration
-    ├── Deal properties
-    └── Automation triggers
-```
-
-#### Phase 2: Sales Hub
-
-**2.1 Activities**
-```
-├── Email tracking
-├── Call logging
-├── Meeting scheduler
-├── Task management
-└── Notes
-```
-
-**2.2 Sales Tools**
-```
-├── Email templates
-├── Sequences (follow-up automation)
-├── Documents sharing
-└── Quotes
-```
-
-#### Phase 3: Marketing Hub
-
-**3.1 Lead Generation**
-```
-├── Form builder
-├── Landing pages
-├── Pop-ups
-└── Live chat
-```
-
-**3.2 Email Marketing**
-```
-├── Email editor
-├── Campaign management
-├── A/B testing
-└── Analytics
-```
-
-#### Phase 4: Service Hub
-
-**4.1 Ticketing**
-```
-├── Ticket management
-├── SLA tracking
-├── Routing rules
-└── Ticket views
-```
-
-**4.2 Knowledge Base**
-```
-├── Article editor
-├── Categories
-├── Search
-└── Analytics
-```
-
----
-
-## V. DATABASE SCHEMA STRATEGY
-
-### A. Core Tables
+### B. Core Tables
 
 ```sql
--- Multi-tenancy: Mọi table đều có tenant_id
--- Soft delete: Mọi table đều có deleted_at
--- Audit: created_at, updated_at, created_by, updated_by
+-- Every table has these columns:
+-- id UUID PRIMARY KEY
+-- tenant_id UUID NOT NULL (indexed)
+-- created_at, updated_at TIMESTAMPTZ
+-- deleted_at TIMESTAMPTZ (soft delete)
+-- custom_properties JSONB (flexible fields)
 
--- Core Objects
-CREATE TABLE contacts (
-    id UUID PRIMARY KEY,
-    tenant_id UUID NOT NULL,
-    email VARCHAR(255),
-    first_name VARCHAR(100),
-    last_name VARCHAR(100),
-    phone VARCHAR(50),
-    lifecycle_stage VARCHAR(50),
-    lead_status VARCHAR(50),
-    owner_id UUID,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    deleted_at TIMESTAMP,
-    properties JSONB DEFAULT '{}'
-);
-
-CREATE TABLE companies (
-    id UUID PRIMARY KEY,
-    tenant_id UUID NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    domain VARCHAR(255),
-    industry VARCHAR(100),
-    size VARCHAR(50),
-    owner_id UUID,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    deleted_at TIMESTAMP,
-    properties JSONB DEFAULT '{}'
-);
-
-CREATE TABLE deals (
-    id UUID PRIMARY KEY,
-    tenant_id UUID NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    amount DECIMAL(15,2),
-    stage_id UUID,
-    pipeline_id UUID,
-    close_date DATE,
-    owner_id UUID,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    deleted_at TIMESTAMP,
-    properties JSONB DEFAULT '{}'
-);
-
--- Associations
-CREATE TABLE contact_company (
-    contact_id UUID,
-    company_id UUID,
-    is_primary BOOLEAN DEFAULT false,
-    PRIMARY KEY (contact_id, company_id)
-);
-
-CREATE TABLE deal_contact (
-    deal_id UUID,
-    contact_id UUID,
-    role VARCHAR(50),
-    PRIMARY KEY (deal_id, contact_id)
-);
-
--- Activities
-CREATE TABLE activities (
-    id UUID PRIMARY KEY,
-    tenant_id UUID NOT NULL,
-    type VARCHAR(50), -- email, call, meeting, note, task
-    subject VARCHAR(255),
-    body TEXT,
-    contact_id UUID,
-    company_id UUID,
-    deal_id UUID,
-    owner_id UUID,
-    due_date TIMESTAMP,
-    completed_at TIMESTAMP,
-    metadata JSONB,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- Pipeline Configuration
-CREATE TABLE pipelines (
-    id UUID PRIMARY KEY,
-    tenant_id UUID NOT NULL,
-    name VARCHAR(100),
-    is_default BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE pipeline_stages (
-    id UUID PRIMARY KEY,
-    pipeline_id UUID,
-    name VARCHAR(100),
-    order_index INTEGER,
-    probability INTEGER DEFAULT 0,
-    created_at TIMESTAMP DEFAULT NOW()
-);
+contacts          -- email, first_name, last_name, phone, lifecycle_stage, lead_status, owner_id
+companies         -- name, domain, industry, size, annual_revenue, owner_id
+deals             -- name, amount, stage_id, pipeline_id, close_date, owner_id
+tickets           -- subject, status, priority, stage_id, pipeline_id, owner_id
+activities        -- activity_type, subject, body, metadata(JSONB), activity_date, owner_id
 ```
 
-### B. Indexes Strategy
+### C. Schema Tables
 
 ```sql
--- Performance indexes
-CREATE INDEX idx_contacts_tenant ON contacts(tenant_id);
-CREATE INDEX idx_contacts_email ON contacts(email);
-CREATE INDEX idx_contacts_owner ON contacts(owner_id);
-CREATE INDEX idx_contacts_lifecycle ON contacts(lifecycle_stage);
+property_definitions  -- object_type, internal_name, label, property_type, field_type, options, validation_rules
+associations          -- from_object_type, from_object_id, to_object_type, to_object_id, label, is_primary
+pipelines             -- object_type, label, display_order, is_default
+pipeline_stages       -- pipeline_id, label, display_order, probability, is_closed, is_won, required_properties
+organizations         -- name, slug, plan, settings
+org_members           -- org_id, user_id, role
+audit_log             -- table_name, record_id, operation, old_data, new_data, changed_fields, user_id
+```
 
-CREATE INDEX idx_companies_tenant ON companies(tenant_id);
-CREATE INDEX idx_companies_domain ON companies(domain);
+### D. Index Strategy
 
-CREATE INDEX idx_deals_tenant ON deals(tenant_id);
-CREATE INDEX idx_deals_pipeline ON deals(pipeline_id);
-CREATE INDEX idx_deals_stage ON deals(stage_id);
-CREATE INDEX idx_deals_owner ON deals(owner_id);
-CREATE INDEX idx_deals_close_date ON deals(close_date);
+```sql
+-- Tenant isolation (every table)
+CREATE INDEX idx_{table}_tenant ON {table}(tenant_id);
 
-CREATE INDEX idx_activities_tenant ON activities(tenant_id);
-CREATE INDEX idx_activities_contact ON activities(contact_id);
-CREATE INDEX idx_activities_type ON activities(type);
-CREATE INDEX idx_activities_created ON activities(created_at DESC);
+-- Active records only
+CREATE INDEX idx_{table}_active ON {table}(tenant_id, created_at) WHERE deleted_at IS NULL;
+
+-- JSONB custom properties
+CREATE INDEX idx_{table}_custom ON {table} USING GIN(custom_properties);
+
+-- Full-text search
+CREATE INDEX idx_{table}_search ON {table} USING GIN(search_vector);
+
+-- Composite cursors for pagination
+CREATE INDEX idx_{table}_cursor ON {table}(tenant_id, created_at DESC, id);
 ```
 
 ---
 
-## VI. SPRINT ROADMAP
+## V. UI/UX ARCHITECTURE
 
-### Sprint 1: Foundation (Week 1-2)
+> Full patterns: `docs/research/master-plan-research/ux-patterns.md`
+
+### A. 20 Priority Components
+
+| # | Component | Description | Library |
+|---|-----------|-------------|---------|
+| 1 | **AppShell** | Collapsible sidebar + top bar layout | Custom |
+| 2 | **DataTable** | Sortable, filterable, paginated, inline editing | TanStack Table |
+| 3 | **RecordPage** | 3-column layout (properties \| timeline \| associations) | Custom |
+| 4 | **Timeline** | Activity feed with type filters | Custom |
+| 5 | **SlidePanel** | Right-side slide-in drawer (400-500px) | shadcn/ui Sheet |
+| 6 | **FormBuilder** | Dynamic forms with Zod validation | React Hook Form |
+| 7 | **Modal** | Dialog overlay (sm/md/lg) | shadcn/ui Dialog |
+| 8 | **BoardView** | Kanban with drag-and-drop | dnd-kit |
+| 9 | **BoardCard** | Configurable deal/ticket cards | Custom |
+| 10 | **FilterBar** | Quick filters + advanced panel | Custom |
+| 11 | **SavedViews** | Tab system for saved filter combinations | Custom |
+| 12 | **SearchInput** | Global search with autocomplete (Cmd+K) | shadcn/ui Command |
+| 13 | **Toast** | Notification toasts (success/error/warning/info) | Sonner |
+| 14 | **Button** | Primary/secondary/danger with sizes/states | shadcn/ui Button |
+| 15 | **DatePicker** | Calendar with range and presets | shadcn/ui Calendar |
+| 16 | **Dropdown** | Select + action menu | shadcn/ui Select |
+| 17 | **EmptyState** | Illustration + message + CTA | Custom |
+| 18 | **LoadingSkeleton** | Shimmer placeholders | shadcn/ui Skeleton |
+| 19 | **Tag/Badge** | Colored label pills | shadcn/ui Badge |
+| 20 | **Avatar** | Initials fallback + photo | shadcn/ui Avatar |
+
+### B. Page Layout Patterns
+
+**List View (Contacts, Companies, Tickets)**
 ```
-□ Setup Prisma schema với core tables
-□ Setup Supabase Auth
-□ Create base layout (Sidebar, Header)
-□ Setup API routes structure
-□ Create shared UI components
++-----------------------------------------------------------+
+| Page Title                    [Create] [Import] [More]     |
++-----------------------------------------------------------+
+| [View Tab 1] [View Tab 2] [+ Add View]                    |
++-----------------------------------------------------------+
+| [Owner v] [Status v] [Date v] [+ More]  [Search] [Columns]|
++-----------------------------------------------------------+
+| [x] | Name      | Email          | Phone    | Owner       |
+|-----|-----------|----------------|----------|-------------|
+| [ ] | John Doe  | john@acme.com  | +1-555.. | Sarah       |
++-----------------------------------------------------------+
+| < Prev  [1] [2] [3]  Next >       Showing 1-25 of 1,234  |
++-----------------------------------------------------------+
 ```
 
-### Sprint 2: Contacts Module (Week 3-4)
+**Record Detail (3-Column)**
 ```
-□ Contact list view với table
-□ Contact detail view
-□ Contact create/edit forms
-□ Activity timeline component
-□ Search và filters
-```
-
-### Sprint 3: Companies & Associations (Week 5-6)
-```
-□ Company list/detail views
-□ Company create/edit
-□ Contact-Company associations
-□ Association management UI
-```
-
-### Sprint 4: Deals & Pipeline (Week 7-8)
-```
-□ Pipeline board (Kanban)
-□ Deal cards với drag-drop
-□ Deal detail view
-□ Pipeline settings
-□ Stage management
++--Left (300px)----+--Center (flex)------+--Right (300px)----+
+| [Avatar]         | [Overview][Activity]| Companies         |
+| Name             |                     | [Card]            |
+| [Note][Email]    | [Filter Bar]        |                   |
+| [Call][Task]     |                     | Deals             |
+|                  | [Activity 1]        | [Card]            |
+| About This Record| [Activity 2]       |                   |
+| +- Email: ...    | [Activity 3]        | Tickets           |
+| +- Phone: ...    |                     | [Card]            |
+| +- Owner: ...    |                     |                   |
+| [View All Props] |                     | Attachments       |
++------------------+---------------------+-------------------+
 ```
 
-### Sprint 5: Activities & Timeline (Week 9-10)
+**Pipeline Board (Deals, Tickets)**
 ```
-□ Activity types (email, call, meeting, note, task)
-□ Activity logging UI
-□ Timeline improvements
-□ Task management
-□ Notifications
++-----------------------------------------------------------+
+| Pipeline: [Sales v]  [Table] [Board]  [Create Deal]       |
+| Total: $450K | Weighted: $198K | Deals: 15                |
++-----------------------------------------------------------+
+| Qualify(20%) | Connect(40%) | Propose(60%) | Close(80%)   |
+| $50K / 3     | $120K / 4    | $80K / 2     | $100K / 2   |
+| [Deal Card]  | [Deal Card]  | [Deal Card]  | [Deal Card] |
+| [Deal Card]  | [Deal Card]  |              |             |
++-----------------------------------------------------------+
 ```
 
-### Sprint 6: Dashboard & Reports (Week 11-12)
-```
-□ Dashboard layout
-□ Key metrics widgets
-□ Deal forecast
-□ Activity reports
-□ Export functionality
-```
+### C. Responsive Strategy
+
+| Breakpoint | Width | Layout |
+|-----------|-------|--------|
+| **Desktop** | >= 1280px | Full 3-column record, sidebar expanded |
+| **Tablet** | 768-1279px | 2-column, sidebar toggleable |
+| **Mobile** | < 768px | Single column, bottom nav, cards instead of tables |
 
 ---
 
-## VII. AUTOMATION STRATEGY
+## VI. SPRINT ROADMAP (16 Sprints, 6 Phases)
 
-### A. MCP-Powered Automation
+### Phase 1: Foundation (Sprints 1-2)
 
-```
-1. Auto-research khi bắt đầu feature mới:
-   tavily → research best practices → memory → store
+#### Sprint 1: Auth, Shell, Database Foundation
+- [ ] Supabase project setup with RLS policies
+- [ ] Auth flow (login, signup, password reset) with `@supabase/ssr`
+- [ ] Organizations/tenants table with `org_members`
+- [ ] AppShell: collapsible left sidebar (icon-only collapsed, hover to expand, pin toggle)
+- [ ] Top navigation bar (logo, search placeholder, notifications, settings, user menu)
+- [ ] Base layout with loading/error boundaries
+- [ ] Design tokens setup (colors, typography, spacing per DESIGN_SYSTEM.md)
 
-2. Auto-schema design:
-   sequential-thinking → analyze requirements → hubspot-db → create tables
+#### Sprint 2: Contact Management
+- [ ] Contacts table (hybrid schema: fixed + JSONB)
+- [ ] DataTable component (TanStack Table v8):
+  - Sortable columns, quick filters, column customization
+  - Row selection, inline editing, pagination (25/50/100)
+- [ ] SlidePanel for "Create Contact" form
+- [ ] Contact CRUD via Server Actions + Zod validation
+- [ ] EmptyState, LoadingSkeleton, Toast components
+- [ ] Bulk actions (edit, delete, assign)
 
-3. Auto-component generation:
-   implement-design → parse requirements → filesystem → create component
+### Phase 2: Core CRM (Sprints 3-5)
 
-4. Auto-PR creation:
-   filesystem → detect changes → github → create PR với description
-```
+#### Sprint 3: Companies + Record Detail Page
+- [ ] Companies table (hybrid schema)
+- [ ] 3-column RecordPage layout component
+- [ ] Contact detail page (RecordPage)
+- [ ] Company detail page (RecordPage)
+- [ ] Contact-Company associations (auto by email domain, manual)
+- [ ] PropertyField component (inline editable)
 
-### B. Development Automation Scripts
+#### Sprint 4: Deal Pipeline
+- [ ] Deals, pipelines, pipeline_stages tables
+- [ ] Kanban BoardView with dnd-kit
+  - Stage columns (count + total), drag-drop cards
+  - Configurable card properties, metrics bar
+- [ ] Deal list view (table format)
+- [ ] Deal creation form (SlidePanel)
+- [ ] Pipeline settings (stages, probabilities)
+- [ ] Deal detail page (RecordPage)
+- [ ] Optimistic updates for drag-drop
 
-```bash
-# scripts/new-feature.sh
-# Tự động tạo structure cho feature mới
+#### Sprint 5: Activities + Associations
+- [ ] Activities table (type-specific JSONB metadata)
+- [ ] Timeline component
+  - Activity entries with type icons
+  - Filter bar (type, user, search)
+  - Expand/collapse toggle
+- [ ] Activity composer (quick action icons on record page)
+- [ ] Note, Call, Meeting, Task creation forms
+- [ ] Generic associations system
+  - Contact-Company, Contact-Deal, Company-Deal
+  - Association labels ("Primary", "Decision Maker")
+  - Association cards in record right sidebar
 
-#!/bin/bash
-FEATURE=$1
+### Phase 3: Customization + Service (Sprints 6-8)
 
-mkdir -p src/app/$FEATURE
-mkdir -p src/components/features/$FEATURE
-mkdir -p src/hooks/use$FEATURE
-mkdir -p src/types/$FEATURE
+#### Sprint 6: Custom Properties + Saved Views
+- [ ] property_definitions table and admin UI
+- [ ] Property creation wizard (name, type, options, validation)
+- [ ] Dynamic form rendering based on property definitions
+- [ ] SavedViews system (create/save/rename/delete, tabs, visibility)
+- [ ] Advanced filter panel (AND/OR logic, all property types)
 
-echo "Created structure for $FEATURE"
-```
+#### Sprint 7: Tickets + Global Search
+- [ ] Tickets table with pipeline support
+- [ ] Ticket list view + board view (Kanban)
+- [ ] Ticket detail page (RecordPage)
+- [ ] Full-text search (tsvector + GIN, Cmd+K global search)
+- [ ] Autocomplete dropdown grouped by object type
+
+#### Sprint 8: Dashboard + Settings
+- [ ] Dashboard page with widget grid
+  - KPI cards, bar/line/pie/funnel charts (Recharts)
+  - Drag-and-drop widget placement and resizing
+  - Global filters (date range, team, owner)
+- [ ] Pre-built dashboard templates
+- [ ] User Management settings (invite, permissions, teams)
+- [ ] General settings (account, branding, currency)
+
+### Phase 4: Communication + Data (Sprints 9-10)
+
+#### Sprint 9: Email Integration + Import/Export
+- [ ] Email logging on contact/deal timelines
+- [ ] Email compose from record page
+- [ ] Email templates (create, save, use)
+- [ ] CSV Import (upload, column mapping, duplicate detection, progress)
+- [ ] CSV Export (current view or all records)
+
+#### Sprint 10: Notifications + Real-time
+- [ ] In-app notifications (bell icon dropdown)
+- [ ] Notification types (assignments, stage changes, task reminders)
+- [ ] Notification preferences (settings)
+- [ ] Supabase Realtime integration
+  - Live deal board updates
+  - Real-time notifications
+  - Activity timeline live updates
+
+### Phase 5: Automation + Marketing (Sprints 11-13)
+
+#### Sprint 11: Workflow Automation
+- [ ] Workflow engine (triggers, actions, branching logic)
+- [ ] Visual workflow builder (node-based)
+- [ ] Trigger types: record created, property changed, stage changed
+- [ ] Action types: send email, create task, update property, assign owner
+- [ ] Lead rotation (round-robin)
+- [ ] Execution logging
+
+#### Sprint 12: Email Marketing
+- [ ] Email campaign builder (Tiptap-based editor)
+- [ ] Contact list targeting and personalization tokens
+- [ ] Send scheduling
+- [ ] Campaign analytics (open/click/bounce rates)
+
+#### Sprint 13: Forms + Landing Pages
+- [ ] Drag-and-drop form builder
+- [ ] Field mapping to contact properties
+- [ ] Embed code generation
+- [ ] Basic landing page builder (template-based)
+
+### Phase 6: Advanced Features (Sprints 14-16)
+
+#### Sprint 14: Knowledge Base
+- [ ] Article editor (Tiptap)
+- [ ] Category/section organization
+- [ ] Search and analytics
+- [ ] Public knowledge base portal
+
+#### Sprint 15: Quotes + Products
+- [ ] Product catalog (name, price, SKU)
+- [ ] Quote generation (line items, discounts, templates)
+- [ ] PDF export
+- [ ] Invoice generation (basic)
+
+#### Sprint 16: AI Features
+- [ ] AI Copilot (contact/deal summaries, email drafts, meeting notes)
+- [ ] Predictive features (win probability, next best action, lead scoring)
+- [ ] Data quality (duplicate detection, missing field suggestions)
 
 ---
 
-## VIII. QUALITY ASSURANCE
+## VII. QUALITY GATES
 
-### A. Code Quality Gates
+### Per-Feature Gates
 
-| Check | Tool | Threshold |
-|-------|------|-----------|
-| TypeScript | tsc --strict | 0 errors |
-| Lint | ESLint | 0 errors |
-| Format | Prettier | Auto-fix |
-| Build | next build | Success |
-| Tests | Jest/Vitest | 80% coverage |
+| Gate | Checks | Method |
+|------|--------|--------|
+| **Gate 1: Research** | Competitive analysis, UX patterns, tech research complete | Manual review |
+| **Gate 2: Code** | TypeScript, build, lint, tenant_id, soft delete, design tokens | Automated commands |
+| **Gate 3: QA** | E2E tests pass, data integrity, code review, zero bugs | Manual + automated |
 
-### B. Performance Gates
+### Code Quality
+
+| Check | Command | Threshold |
+|-------|---------|-----------|
+| TypeScript | `npx tsc --noEmit` | 0 errors |
+| Build | `npx next build` | Success |
+| Lint | `npx eslint src/` | 0 errors |
+| tenant_id | Grep all API routes | 100% coverage |
+| Soft delete | Grep for DELETE | 0 hard deletes |
+
+### Performance Gates
 
 | Metric | Target |
 |--------|--------|
@@ -731,67 +474,175 @@ echo "Created structure for $FEATURE"
 | TTI | < 3.5s |
 | Bundle Size | < 200KB initial |
 
-### C. Security Gates
+### Security Gates
 
 | Check | Requirement |
 |-------|-------------|
-| SQL Injection | Parameterized queries only |
-| XSS | Sanitize all user input |
-| CSRF | Token validation |
-| Auth | JWT + refresh tokens |
-| Multi-tenancy | tenant_id on ALL queries |
+| SQL Injection | Parameterized queries only (Supabase client) |
+| XSS | Sanitize all user input, React's built-in escaping |
+| CSRF | Server Actions + SameSite cookies |
+| Auth | Supabase Auth + middleware protection |
+| Multi-tenancy | RLS enabled, tenant_id on ALL queries |
+| Validation | Zod on all inputs (client + server) |
 
 ---
 
-## IX. MONITORING & ITERATION
+## VIII. RISK ASSESSMENT
 
-### A. Success Tracking
+| # | Risk | Probability | Impact | Mitigation |
+|---|------|-------------|--------|------------|
+| 1 | JSONB performance at scale | Medium | High | GIN indexes, materialize hot properties |
+| 2 | RLS policy degradation | Medium | High | Index policy columns, cache tenant_id in JWT |
+| 3 | Kanban drag-drop complexity | High | Medium | dnd-kit, optimistic updates, version locking |
+| 4 | Scope creep | High | High | Strict sprint boundaries, P0/P1/P2/P3 |
+| 5 | DataTable 10K+ rows | Medium | Medium | Virtual scrolling, cursor pagination |
+| 6 | Multi-tenant data leakage | Low | Critical | RLS from day 1, automated isolation tests |
+| 7 | Real-time sync conflicts | Medium | Medium | Optimistic UI with server reconciliation |
+| 8 | Email deliverability | Medium | High | Established provider (Resend/Postmark) |
+| 9 | Bundle size bloat | Medium | Medium | Dynamic imports, tree-shaking |
+| 10 | Supabase vendor lock-in | Low | Medium | Repository pattern, standard PostgreSQL |
+
+---
+
+## IX. MODULE PRIORITY MATRIX
+
+| Priority | Module | Complexity | Sprint | Dependencies |
+|----------|--------|-----------|--------|-------------|
+| P0 | Auth + Multi-tenancy | Medium | 1 | None |
+| P0 | Navigation Shell | Medium | 1 | Auth |
+| P0 | Contact Management | High | 2 | Auth, Shell |
+| P0 | Company Management | Medium | 3 | Contacts |
+| P0 | Deal Pipeline | High | 4 | Companies |
+| P0 | Record Detail Page | High | 3-4 | Contacts |
+| P1 | Activity Timeline | High | 5 | Record Detail |
+| P1 | Associations System | Medium | 5 | All CRM Objects |
+| P1 | Custom Properties | High | 6 | Property Definitions |
+| P1 | Ticket Management | Medium | 7 | Pipelines |
+| P1 | Dashboard + Reporting | High | 8 | Deals, Activities |
+| P1 | Saved Views + Filters | Medium | 6 | DataTable |
+| P2 | Global Search | Medium | 7 | Full-text Search |
+| P2 | Email Integration | High | 9 | Activities |
+| P2 | Settings + Users | Medium | 8 | RBAC |
+| P2 | Import/Export | Medium | 9 | All CRM Objects |
+| P2 | Notifications | Medium | 10 | Realtime |
+| P3 | Workflow Automation | Very High | 11 | All Modules |
+| P3 | Email Marketing | High | 12 | Contacts, Email |
+| P3 | Forms + Landing Pages | High | 13 | Marketing |
+| P3 | Knowledge Base | Medium | 14 | Content System |
+| P3 | Quotes + Invoicing | High | 15 | Deals, Products |
+| P3 | AI Features | High | 16 | All Modules |
+
+---
+
+## X. AI TEAMS STRATEGY
+
+> Full details: `docs/AI_TEAMS_STRATEGY.md`
+
+### Overview
+
+F-CORE development uses a 3-Team AI orchestration model:
 
 ```
-Weekly Review:
-├── Features completed vs planned
-├── Bug count and severity
-├── Performance metrics
-├── User feedback (when applicable)
-└── Technical debt added/resolved
-
-Monthly Review:
-├── Sprint velocity
-├── Feature coverage vs HubSpot
-├── Architecture health
-└── Team productivity
+Research --> Gate 1 --> Execution --> Gate 2 --> Testing --> Gate 3 --> PR
+                                                    |                |
+                                                    +-- Fix Loop ----+
+                                                    (max 3 cycles)
 ```
 
-### B. Iteration Process
+### Teams
+
+| Team | Focus | Key Outputs |
+|------|-------|-------------|
+| **Team 1: Research** | Competitive analysis, UX patterns, tech research | `docs/research/{feature}/` |
+| **Team 2: Execution** | Database, Backend, Frontend, UI polish | Source code + `docs/plans/{feature}/` |
+| **Team 3: Testing** | E2E, data integrity, code review | `docs/test-reports/{feature}/` |
+
+### Progressive Feature Development
+
+1. Companies Page (simple CRUD - workflow validation)
+2. Contacts Page (CRUD + associations)
+3. Deal Pipeline (Kanban + drag-drop)
+
+---
+
+## XI. GIT WORKFLOW
 
 ```
-1. Demo feature → gather feedback
-2. Compare with HubSpot → identify gaps
-3. Prioritize improvements → update backlog
-4. Implement → test → deploy
-5. Repeat
+main
+  +-- feature/{feature-name}
+       +-- commit: "research({feature}): Add analysis"       (after Gate 1)
+       +-- commit: "feat({feature}): Add database schema"    (after DB)
+       +-- commit: "feat({feature}): Add API routes"         (after Backend)
+       +-- commit: "feat({feature}): Add UI components"      (after Frontend)
+       +-- commit: "fix({feature}): Resolve BUG-001"         (fix loop)
+       +-- PR: "feat: {Feature Name}"                        (after Gate 3)
 ```
 
 ---
 
-## X. NEXT IMMEDIATE ACTIONS
+## XII. FILE STRUCTURE
 
-### Today
-- [ ] Finalize database schema
-- [ ] Setup Prisma with initial migration
-- [ ] Create base layout components
-
-### This Week
-- [ ] Complete Contacts list view
-- [ ] Implement basic CRUD operations
-- [ ] Setup authentication flow
-
-### This Sprint
-- [ ] Full Contacts module
-- [ ] Activity timeline
-- [ ] Basic search and filters
+```
+/Users/chong/hubspot-demo/
++-- docs/
+|   +-- MASTER_PLAN.md              <-- This file
+|   +-- DEVELOPMENT_STRATEGY.md     <-- Workflow & tools strategy
+|   +-- AI_TEAMS_STRATEGY.md        <-- 3-team orchestration
+|   +-- DESIGN_SYSTEM.md            <-- UI tokens, colors, typography
+|   +-- REACT_BEST_PRACTICES.md     <-- React patterns
+|   +-- research/                   <-- Team 1 research output
+|   +-- plans/                      <-- Team 2 implementation plans
+|   +-- test-reports/               <-- Team 3 test reports
+|   +-- bugs/                       <-- Bug tracking
++-- src/
+|   +-- app/                        <-- Next.js pages (App Router)
+|   |   +-- (auth)/                 <-- Login, signup
+|   |   +-- (dashboard)/            <-- Dashboard route group
+|   |   |   +-- contacts/           <-- Contact pages
+|   |   |   +-- companies/          <-- Company pages
+|   |   |   +-- deals/              <-- Deal pages (list + board)
+|   |   |   +-- tickets/            <-- Ticket pages
+|   |   |   +-- settings/           <-- Settings pages
+|   |   +-- api/                    <-- API routes
+|   +-- components/
+|   |   +-- ui/                     <-- shadcn/ui base components
+|   |   +-- layout/                 <-- Sidebar, Header, AppShell
+|   |   +-- contacts/               <-- Contact-specific components
+|   |   +-- companies/              <-- Company-specific
+|   |   +-- deals/                  <-- Deal-specific (BoardView, etc.)
+|   |   +-- common/                 <-- Shared (Timeline, RecordPage, etc.)
+|   +-- lib/
+|   |   +-- supabase/               <-- Supabase client (browser + server)
+|   |   +-- validations/            <-- Zod schemas
+|   |   +-- utils.ts
+|   +-- hooks/                      <-- Custom React hooks
+|   +-- types/                      <-- TypeScript types
+|   +-- actions/                    <-- Server Actions
++-- prisma/                         <-- Database schema
++-- supabase/                       <-- Supabase config, migrations
++-- CLAUDE.md                       <-- AI assistant instructions
++-- .env                            <-- Environment variables
+```
 
 ---
 
-*Master Plan này sẽ được cập nhật sau mỗi sprint review.*
-*Tham chiếu: docs/DEVELOPMENT_STRATEGY.md, docs/MCP_USAGE_PLAN.md*
+## XIII. NEXT IMMEDIATE ACTIONS
+
+### Sprint 1 Checklist
+- [ ] Setup Supabase project with organizations table
+- [ ] Implement RLS policies for tenant isolation
+- [ ] Build auth flow (login, signup, password reset)
+- [ ] Build AppShell (collapsible sidebar + top bar)
+- [ ] Setup shadcn/ui with F-CORE design tokens
+- [ ] Create base loading/error components
+
+### Research References
+- Competitive: `docs/research/master-plan-research/competitive-analysis.md`
+- UX Patterns: `docs/research/master-plan-research/ux-patterns.md`
+- Tech Stack: `docs/research/master-plan-research/tech-research.md`
+- Summary: `docs/research/master-plan-research/research-summary.md`
+
+---
+
+*Master Plan v2.0 - Updated 2026-02-07 based on comprehensive HubSpot research.*
+*References: docs/DEVELOPMENT_STRATEGY.md, docs/AI_TEAMS_STRATEGY.md*

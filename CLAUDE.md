@@ -120,6 +120,7 @@ fetch (API call) → sequential-thinking (process) → hubspot-db (store) → me
 |------|----------|-------------|
 | `docs/MASTER_PLAN.md` | Kế hoạch tổng thể, roadmap, clone strategy | **ĐẦU MỖI PHIÊN** |
 | `docs/DEVELOPMENT_STRATEGY.md` | Chiến lược sử dụng Skills & MCP | Đầu mỗi phiên |
+| `docs/AI_TEAMS_STRATEGY.md` | 3-Team orchestration, gates, fix loop | Khi build feature |
 | `docs/MCP_USAGE_PLAN.md` | Chi tiết sử dụng từng MCP | Khi cần MCP |
 | `docs/DESIGN_SYSTEM.md` | Design tokens, colors, typography | Khi code UI |
 | `docs/REACT_BEST_PRACTICES.md` | React patterns, performance | Khi code React |
@@ -159,3 +160,56 @@ cat docs/DEVELOPMENT_STRATEGY.md
 ## CURRENT SPRINT
 
 > Sprint 1: Core CRM (Xem chi tiết tại `docs/DEVELOPMENT_STRATEGY.md` Section IX)
+
+---
+
+## AI TEAMS WORKFLOW (3-Team Orchestration)
+
+> Full strategy: `docs/AI_TEAMS_STRATEGY.md`
+
+### Quick Flow
+```
+Feature Request
+  → Team 1: Research (3 parallel analysts)
+  → Gate 1: Research complete?
+  → Team 2: Execution (Plan → DB → Backend||Frontend → Polish)
+  → Gate 2: Code quality? (tsc, build, lint, tenant_id, soft delete)
+  → Team 3: Testing (3 parallel testers)
+  → Gate 3: All tests pass?
+  → Git Commit & PR
+```
+
+### Artifact Locations
+| Phase | Output Location |
+|-------|----------------|
+| Research | `docs/research/{feature}/` |
+| Plans | `docs/plans/{feature}/` |
+| Test Reports | `docs/test-reports/{feature}/` |
+| Bugs | `docs/bugs/{feature}/` |
+
+### Gate Checklist
+
+**Gate 1** (Research):
+- [ ] `competitive-analysis.md` - 3+ competitors
+- [ ] `ux-patterns.md` - user flows documented
+- [ ] `tech-research.md` - recommended approach
+- [ ] `research-summary.md` - synthesis complete
+
+**Gate 2** (Code):
+- [ ] `npx tsc --noEmit` passes
+- [ ] `npx next build` passes
+- [ ] No ESLint errors
+- [ ] All API routes have `tenant_id`
+- [ ] Soft delete pattern used
+- [ ] Design tokens from DESIGN_SYSTEM.md
+
+**Gate 3** (QA):
+- [ ] E2E critical flows pass
+- [ ] Data integrity verified
+- [ ] Code review - zero critical issues
+- [ ] `test-summary.md` verdict = PASS
+
+### Session Resume
+```
+memory.open_nodes(["feature:{name}"]) → TaskList → Read artifacts → Continue
+```

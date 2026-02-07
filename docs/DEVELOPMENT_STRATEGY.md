@@ -345,4 +345,66 @@ SELECT status, COUNT(*) FROM deals GROUP BY status;
 
 ---
 
+## X. AI TEAMS WORKFLOW
+
+> Full details: `docs/AI_TEAMS_STRATEGY.md`
+
+### Overview
+
+Every feature is built by 3 specialized AI teams in sequence:
+
+```
+Team 1 (Research) → Gate 1 → Team 2 (Execution) → Gate 2 → Team 3 (Testing) → Gate 3 → PR
+                                                                    |                |
+                                                                    +-- Fix Loop ----+
+                                                                    (max 3 cycles)
+```
+
+### Team Summary
+
+| Team | Roles | Parallel? | Output |
+|------|-------|-----------|--------|
+| **Research** | Director + 3 Analysts | 3 analysts parallel | `docs/research/{feature}/` |
+| **Execution** | Tech Lead + 4 Engineers | Backend + Frontend parallel | Source code + `docs/plans/{feature}/` |
+| **Testing** | QA Lead + 3 Testers | 3 testers parallel | `docs/test-reports/{feature}/` |
+
+### Quality Gates
+
+| Gate | Checks | Automated? |
+|------|--------|-----------|
+| **Gate 1** | Research files complete, 3+ competitors, flows documented | Manual read |
+| **Gate 2** | `tsc --noEmit`, `next build`, ESLint, tenant_id, soft delete | Automated commands |
+| **Gate 3** | E2E pass, data integrity, code review, zero bugs | Manual read |
+
+### How to Start a Feature
+
+```
+1. User: "Build {feature name}"
+2. Orchestrator creates ~17 tasks with dependencies (see AI_TEAMS_STRATEGY.md Section VII)
+3. Fire Team 1 (3 parallel research Task agents)
+4. Evaluate Gate 1
+5. Fire Team 2 (sequential: Plan → DB → Backend||Frontend → Polish)
+6. Evaluate Gate 2
+7. Fire Team 3 (3 parallel testing Task agents)
+8. Evaluate Gate 3
+9. If pass → git commit & PR
+10. If fail → Fix Loop (max 3 cycles)
+```
+
+### Fix Loop
+- QA writes bug reports to `docs/bugs/{feature}/`
+- Tech Lead assigns fixes to appropriate specialist
+- QA re-tests only fixed bugs
+- Max 3 cycles, then escalate to user
+
+### Session Resume
+```
+1. memory.open_nodes(["feature:{name}"]) → get state
+2. TaskList → get pending tasks
+3. Read docs/ artifacts → understand progress
+4. Continue from next_step
+```
+
+---
+
 *Tài liệu này được tự động tham chiếu trong mọi phiên làm việc.*
