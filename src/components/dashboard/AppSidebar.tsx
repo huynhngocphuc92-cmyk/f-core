@@ -8,6 +8,7 @@ import {
   Users,
   Building2,
   CircleDollarSign,
+  Activity,
   CalendarCheck,
   BarChart3,
   Settings,
@@ -24,6 +25,7 @@ const navigation = [
   { name: "Contacts", href: "/contacts", icon: Users },
   { name: "Companies", href: "/companies", icon: Building2 },
   { name: "Deals", href: "/deals", icon: CircleDollarSign },
+  { name: "Activities", href: "/activities", icon: Activity },
   { name: "Tasks", href: "/tasks", icon: CalendarCheck },
   { name: "Reports", href: "/reports", icon: BarChart3 },
 ];

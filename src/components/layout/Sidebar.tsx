@@ -8,6 +8,7 @@ import {
   Users,
   Building2,
   Handshake,
+  Activity,
   Mail,
   BarChart3,
   Settings,
@@ -47,6 +48,7 @@ const MAIN_NAV_ITEMS: NavItem[] = [
   { id: "contacts", label: "Contacts", icon: Users, href: "/contacts", badge: 12 },
   { id: "companies", label: "Companies", icon: Building2, href: "/companies" },
   { id: "deals", label: "Deals", icon: Handshake, href: "/deals", badge: 5 },
+  { id: "activities", label: "Activities", icon: Activity, href: "/activities" },
   { id: "marketing", label: "Marketing", icon: Mail, href: "/marketing" },
   { id: "reports", label: "Reports", icon: BarChart3, href: "/reports" },
 ];
@@ -216,7 +218,7 @@ const SidebarHeader = memo(function SidebarHeader({
         "transition-all duration-300"
       )}
     >
-      {/* HubSpot-style Logo */}
+      {/* F-CORE Logo */}
       <div className="flex items-center gap-3">
         <div
           className={cn(
@@ -226,10 +228,10 @@ const SidebarHeader = memo(function SidebarHeader({
             "font-bold text-lg"
           )}
         >
-          H
+          F
         </div>
         {!collapsed && (
-          <span className="font-semibold text-foreground">HubSpot</span>
+          <span className="font-semibold text-foreground">F-CORE</span>
         )}
       </div>
     </div>
@@ -365,7 +367,7 @@ const NotificationBell = memo(function NotificationBell({
 // =============================================================================
 
 /**
- * HubSpot-style Sidebar Component
+ * F-CORE Sidebar Component
  *
  * Features:
  * - Collapsible with smooth animation
