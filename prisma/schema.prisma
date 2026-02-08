@@ -52,6 +52,9 @@ model Tenant {
   deals         Deal[]
   activities    Activity[]
   pipelines     Pipeline[]
+  emailTemplates    EmailMarketingTemplate[]
+  emailCampaigns    EmailCampaign[]
+  contactLists      ContactList[]
 }
 
 // ============================================
@@ -104,6 +107,8 @@ model Contact {
   companies       ContactCompany[]
   deals           DealContact[]
   activities      Activity[]
+  listMemberships ContactListMember[]
+  campaignSends   EmailCampaignSend[]
 
   @@index([tenantId])
   @@index([email])
@@ -406,4 +411,207 @@ model PropertyDefinition {
 
   @@unique([tenantId, objectType, name])
   @@index([tenantId, objectType])
+}
+
+// ============================================
+// EMAIL MARKETING
+// ============================================
+
+model EmailMarketingTemplate {
+  id            String    @id @default(uuid())
+  tenantId      String
+
+  name          String
+  subject       String?
+  previewText   String?
+
+  // Content
+  jsonContent   Json?     // Block structure for editor
+  htmlContent   String?   @db.Text
+
+  // Organization
+  category      String?   // newsletter, promotional, transactional, welcome
+  thumbnailUrl  String?
+  isSystem      Boolean   @default(false)
+  isActive      Boolean   @default(true)
+
+  // Usage
+  useCount      Int       @default(0)
+  lastUsedAt    DateTime?
+
+  // Audit
+  createdBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  campaigns     EmailCampaign[]
+
+  @@index([tenantId])
+  @@index([category])
+  @@index([deletedAt])
+}
+
+model EmailCampaign {
+  id            String    @id @default(uuid())
+  tenantId      String
+
+  name          String
+  description   String?
+
+  // Content
+  templateId    String?
+  subject       String
+  previewText   String?
+  fromName      String
+  fromEmail     String
+  replyTo       String?
+
+  // Audience
+  listId        String?
+
+  // Status: draft, scheduled, sending, sent, cancelled
+  status        String    @default("draft")
+
+  // Scheduling
+  scheduledAt   DateTime?
+  sentAt        DateTime?
+  completedAt   DateTime?
+  cancelledAt   DateTime?
+
+  // Denormalized Stats
+  totalRecipients   Int   @default(0)
+  totalSent         Int   @default(0)
+  totalDelivered    Int   @default(0)
+  totalOpened       Int   @default(0)
+  totalClicked      Int   @default(0)
+  totalBounced      Int   @default(0)
+  totalUnsubscribed Int   @default(0)
+
+  // A/B Testing
+  isAbTest      Boolean   @default(false)
+  abTestConfig  Json?
+
+  // Metadata
+  metadata      Json      @default("{}")
+
+  // Audit
+  createdBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  tenant        Tenant              @relation(fields: [tenantId], references: [id])
+  template      EmailMarketingTemplate? @relation(fields: [templateId], references: [id])
+  list          ContactList?        @relation(fields: [listId], references: [id])
+  sends         EmailCampaignSend[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([deletedAt])
+}
+
+model ContactList {
+  id            String    @id @default(uuid())
+  tenantId      String
+
+  name          String
+  description   String?
+  type          String    @default("static") // static, dynamic
+  filterConfig  Json?
+
+  // Stats
+  memberCount   Int       @default(0)
+
+  // Audit
+  createdBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  members       ContactListMember[]
+  campaigns     EmailCampaign[]
+
+  @@index([tenantId])
+  @@index([deletedAt])
+}
+
+model ContactListMember {
+  listId        String
+  contactId     String
+  addedAt       DateTime  @default(now())
+
+  list          ContactList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  contact       Contact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@id([listId, contactId])
+}
+
+model EmailCampaignSend {
+  id            String    @id @default(uuid())
+  tenantId      String
+
+  campaignId    String
+  contactId     String
+  toEmail       String
+  toName        String?
+
+  // Status: queued, sent, delivered, opened, clicked, bounced, failed
+  status        String    @default("queued")
+
+  espMessageId  String?
+
+  queuedAt      DateTime  @default(now())
+  sentAt        DateTime?
+  deliveredAt   DateTime?
+  firstOpenedAt DateTime?
+  firstClickedAt DateTime?
+  bouncedAt     DateTime?
+  failedAt      DateTime?
+
+  failureReason String?
+  bounceType    String?
+
+  metadata      Json      @default("{}")
+
+  // Relations
+  campaign      EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact       Contact       @relation(fields: [contactId], references: [id])
+  events        EmailCampaignEvent[]
+
+  @@unique([campaignId, contactId])
+  @@index([tenantId])
+  @@index([campaignId])
+  @@index([contactId])
+  @@index([status])
+}
+
+model EmailCampaignEvent {
+  id            String    @id @default(uuid())
+
+  sendId        String
+  campaignId    String
+  contactId     String
+
+  eventType     String    // sent, delivered, opened, clicked, bounced, unsubscribed, complained
+  linkUrl       String?   @db.Text
+  ipAddress     String?
+  userAgent     String?   @db.Text
+  metadata      Json      @default("{}")
+
+  createdAt     DateTime  @default(now())
+
+  // Relations
+  send          EmailCampaignSend @relation(fields: [sendId], references: [id], onDelete: Cascade)
+
+  @@index([sendId])
+  @@index([campaignId])
+  @@index([eventType])
+  @@index([createdAt(sort: Desc)])
 }

@@ -171,6 +171,139 @@ async function main() {
   }
   console.log("✅ Created", activities.length, "activities");
 
+  // Create email marketing templates
+  const templates = [
+    {
+      id: "template-welcome",
+      name: "Welcome Email",
+      subject: "Welcome to {{company_name}}!",
+      previewText: "We're thrilled to have you on board",
+      category: "welcome",
+      isSystem: true,
+      htmlContent: `<div style="max-width:600px;margin:0 auto;font-family:Inter,sans-serif;"><h1 style="color:#0891b2;">Welcome!</h1><p>Hi {{first_name}},</p><p>Thank you for joining us. We're excited to help you grow your business.</p><a href="#" style="display:inline-block;padding:12px 24px;background:#0891b2;color:#fff;text-decoration:none;border-radius:6px;">Get Started</a></div>`,
+      jsonContent: { blocks: [{ type: "heading", content: "Welcome!" }, { type: "text", content: "Hi {{first_name}}, Thank you for joining us." }, { type: "button", content: "Get Started", url: "#" }] },
+    },
+    {
+      id: "template-newsletter",
+      name: "Monthly Newsletter",
+      subject: "{{company_name}} Monthly Update - {{month}}",
+      previewText: "Your monthly digest of news and updates",
+      category: "newsletter",
+      isSystem: true,
+      htmlContent: `<div style="max-width:600px;margin:0 auto;font-family:Inter,sans-serif;"><h1 style="color:#0891b2;">Monthly Newsletter</h1><p>Hi {{first_name}},</p><p>Here's what's new this month:</p><ul><li>Feature update: New dashboard</li><li>Blog: Best practices guide</li><li>Event: Upcoming webinar</li></ul></div>`,
+      jsonContent: { blocks: [{ type: "heading", content: "Monthly Newsletter" }, { type: "text", content: "Here's what's new this month:" }, { type: "list", items: ["Feature update", "Blog post", "Upcoming event"] }] },
+    },
+    {
+      id: "template-promo",
+      name: "Product Update",
+      subject: "Exciting news from {{company_name}}",
+      previewText: "Check out our latest features",
+      category: "promotional",
+      isSystem: true,
+      htmlContent: `<div style="max-width:600px;margin:0 auto;font-family:Inter,sans-serif;"><h1 style="color:#0891b2;">New Features</h1><p>Hi {{first_name}},</p><p>We've been working hard on new features to help you succeed.</p><a href="#" style="display:inline-block;padding:12px 24px;background:#0891b2;color:#fff;text-decoration:none;border-radius:6px;">Learn More</a></div>`,
+      jsonContent: { blocks: [{ type: "heading", content: "New Features" }, { type: "text", content: "We've been working hard on new features." }, { type: "button", content: "Learn More", url: "#" }] },
+    },
+  ];
+
+  for (const tpl of templates) {
+    await prisma.emailMarketingTemplate.upsert({
+      where: { id: tpl.id },
+      update: {},
+      create: { ...tpl, tenantId: tenant.id },
+    });
+  }
+  console.log("✅ Created", templates.length, "email templates");
+
+  // Create contact lists
+  const allContactIds = contacts.map((c) => `contact-${c.email}`);
+
+  const allContactsList = await prisma.contactList.upsert({
+    where: { id: "list-all-contacts" },
+    update: {},
+    create: {
+      id: "list-all-contacts",
+      tenantId: tenant.id,
+      name: "All Contacts",
+      description: "All contacts in the CRM",
+      memberCount: allContactIds.length,
+    },
+  });
+
+  const leadslist = await prisma.contactList.upsert({
+    where: { id: "list-leads-mqls" },
+    update: {},
+    create: {
+      id: "list-leads-mqls",
+      tenantId: tenant.id,
+      name: "Leads & MQLs",
+      description: "Contacts in lead or MQL lifecycle stage",
+      memberCount: 2,
+    },
+  });
+
+  // Add members to lists
+  for (const contactId of allContactIds) {
+    await prisma.contactListMember.upsert({
+      where: { listId_contactId: { listId: allContactsList.id, contactId } },
+      update: {},
+      create: { listId: allContactsList.id, contactId },
+    });
+  }
+
+  const leadContactIds = allContactIds.filter((id) =>
+    ["contact-john@example.com", "contact-jane@techcorp.com"].includes(id)
+  );
+  for (const contactId of leadContactIds) {
+    await prisma.contactListMember.upsert({
+      where: { listId_contactId: { listId: leadslist.id, contactId } },
+      update: {},
+      create: { listId: leadslist.id, contactId },
+    });
+  }
+  console.log("✅ Created 2 contact lists");
+
+  // Create email campaigns
+  const campaigns = [
+    {
+      id: "campaign-welcome",
+      name: "Welcome Series - Feb 2026",
+      description: "Automated welcome email for new contacts",
+      templateId: "template-welcome",
+      subject: "Welcome to F-CORE!",
+      fromName: "F-CORE Team",
+      fromEmail: "hello@f-core.com",
+      listId: allContactsList.id,
+      status: "sent",
+      sentAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      completedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      totalRecipients: 5,
+      totalSent: 5,
+      totalDelivered: 5,
+      totalOpened: 3,
+      totalClicked: 2,
+    },
+    {
+      id: "campaign-newsletter",
+      name: "February Newsletter",
+      description: "Monthly newsletter for February 2026",
+      templateId: "template-newsletter",
+      subject: "F-CORE Monthly Update - February",
+      fromName: "F-CORE Newsletter",
+      fromEmail: "newsletter@f-core.com",
+      listId: allContactsList.id,
+      status: "draft",
+    },
+  ];
+
+  for (const camp of campaigns) {
+    await prisma.emailCampaign.upsert({
+      where: { id: camp.id },
+      update: {},
+      create: { ...camp, tenantId: tenant.id },
+    });
+  }
+  console.log("✅ Created", campaigns.length, "email campaigns");
+
   console.log("🎉 Seeding completed!");
 }
 
