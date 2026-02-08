@@ -52,6 +52,7 @@ model Tenant {
   deals         Deal[]
   activities    Activity[]
   pipelines     Pipeline[]
+  workflows     WorkflowDefinition[]
 }
 
 // ============================================
@@ -406,4 +407,173 @@ model PropertyDefinition {
 
   @@unique([tenantId, objectType, name])
   @@index([tenantId, objectType])
+}
+
+// ============================================
+// WORKFLOW AUTOMATION
+// ============================================
+
+model WorkflowDefinition {
+  id            String    @id @default(uuid())
+  tenantId      String
+
+  // Metadata
+  name          String
+  description   String?
+  objectType    String    // contact, company, deal
+  status        String    @default("draft") // draft, active, paused, archived
+  version       Int       @default(1)
+
+  // Workflow Logic (JSONB)
+  triggerConfig Json      @default("{}")
+  steps         Json      @default("[]")
+  viewport      Json      @default("{\"x\": 0, \"y\": 0, \"zoom\": 1}")
+  settings      Json      @default("{}")
+
+  // Audit
+  createdBy     String?
+  updatedBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  versions      WorkflowVersion[]
+  executions    WorkflowExecution[]
+  enrollments   WorkflowEnrollment[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([objectType])
+  @@index([deletedAt])
+}
+
+model WorkflowVersion {
+  id            String    @id @default(uuid())
+  workflowId    String
+  version       Int
+
+  triggerConfig Json
+  steps         Json
+  settings      Json      @default("{}")
+  changeSummary String?
+  createdBy     String?
+  createdAt     DateTime  @default(now())
+
+  workflow      WorkflowDefinition @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, version])
+  @@index([workflowId])
+}
+
+model WorkflowExecution {
+  id              String    @id @default(uuid())
+  tenantId        String
+  workflowId      String
+  workflowVersion Int
+
+  // Enrolled record
+  objectType      String
+  objectId        String
+
+  // Execution state
+  status          String    @default("running") // running, waiting, completed, failed, cancelled
+  currentStepId   String?
+  triggerEvent    Json      @default("{}")
+  stepResults     Json      @default("{}")
+
+  // Error tracking
+  errorMessage    String?
+  errorStepId     String?
+  retryCount      Int       @default(0)
+  maxRetries      Int       @default(3)
+
+  // Timing
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  nextStepAt      DateTime?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  workflow        WorkflowDefinition @relation(fields: [workflowId], references: [id])
+  stepLogs        WorkflowStepLog[]
+  enrollment      WorkflowEnrollment?
+
+  @@index([tenantId])
+  @@index([workflowId])
+  @@index([status])
+  @@index([objectType, objectId])
+}
+
+model WorkflowStepLog {
+  id            String    @id @default(uuid())
+  executionId   String
+  stepId        String
+  stepType      String
+
+  status        String    // started, completed, failed, skipped
+  inputData     Json      @default("{}")
+  outputData    Json      @default("{}")
+  errorMessage  String?
+
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  durationMs    Int?
+  attempt       Int       @default(1)
+
+  execution     WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@index([executionId])
+  @@index([stepId])
+}
+
+model WorkflowEnrollment {
+  id            String    @id @default(uuid())
+  tenantId      String
+  workflowId    String
+  objectType    String
+  objectId      String
+
+  enrolledAt    DateTime  @default(now())
+  enrolledBy    String    @default("trigger") // trigger, manual, api
+  unenrolledAt  DateTime?
+  unenrollReason String?  // completed, manual, goal_met, suppressed
+
+  executionId   String?   @unique
+
+  workflow      WorkflowDefinition @relation(fields: [workflowId], references: [id])
+  execution     WorkflowExecution? @relation(fields: [executionId], references: [id])
+
+  @@unique([workflowId, objectId])
+  @@index([tenantId])
+  @@index([workflowId])
+  @@index([objectId])
+}
+
+model CrmEvent {
+  id            String    @id @default(uuid())
+  tenantId      String
+
+  eventType     String    // property_change, record_created, record_deleted, form_submission
+  objectType    String
+  objectId      String
+
+  propertyName  String?
+  oldValue      String?
+  newValue      String?
+  metadata      Json      @default("{}")
+
+  source        String    @default("system") // system, api, import, workflow
+  sourceId      String?
+
+  createdAt     DateTime  @default(now())
+
+  @@index([tenantId])
+  @@index([eventType])
+  @@index([objectType, objectId])
+  @@index([propertyName])
+  @@index([createdAt(sort: Desc)])
 }

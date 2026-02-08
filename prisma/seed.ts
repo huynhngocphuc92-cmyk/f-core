@@ -171,6 +171,125 @@ async function main() {
   }
   console.log("✅ Created", activities.length, "activities");
 
+  // Create sample workflows
+  const workflow1 = await prisma.workflowDefinition.create({
+    data: {
+      tenantId: tenant.id,
+      name: "Welcome New Contacts",
+      description: "Automatically send a welcome email when a new contact is created",
+      objectType: "contact",
+      status: "active",
+      triggerConfig: {
+        type: "record_created",
+        objectType: "contact",
+      },
+      steps: [
+        {
+          id: "step_1",
+          type: "send_email",
+          name: "Send welcome email",
+          config: { templateId: "welcome_template" },
+          position: { x: 250, y: 180 },
+          next: ["step_2"],
+        },
+        {
+          id: "step_2",
+          type: "delay",
+          name: "Wait 3 days",
+          config: { duration: 3, unit: "days" },
+          position: { x: 250, y: 310 },
+          next: ["step_3"],
+        },
+        {
+          id: "step_3",
+          type: "create_task",
+          name: "Create follow-up task",
+          config: { subject: "Follow up with new contact", priority: "medium" },
+          position: { x: 250, y: 440 },
+        },
+      ],
+      createdBy: user.id,
+    },
+  });
+
+  const workflow2 = await prisma.workflowDefinition.create({
+    data: {
+      tenantId: tenant.id,
+      name: "MQL Nurture Sequence",
+      description: "Nurture contacts that reach MQL lifecycle stage",
+      objectType: "contact",
+      status: "draft",
+      triggerConfig: {
+        type: "property_change",
+        objectType: "contact",
+        property: "lifecycleStage",
+        operator: "equals",
+        value: "mql",
+      },
+      steps: [
+        {
+          id: "step_1",
+          type: "send_notification",
+          name: "Notify sales team",
+          config: { message: "New MQL: {{contact.firstName}} {{contact.lastName}}" },
+          position: { x: 250, y: 180 },
+          next: ["step_2"],
+        },
+        {
+          id: "step_2",
+          type: "update_property",
+          name: "Set lead status",
+          config: { property: "leadStatus", value: "open" },
+          position: { x: 250, y: 310 },
+        },
+      ],
+      createdBy: user.id,
+    },
+  });
+
+  const workflow3 = await prisma.workflowDefinition.create({
+    data: {
+      tenantId: tenant.id,
+      name: "Deal Stage Automation",
+      description: "Automate actions when deals change stages",
+      objectType: "deal",
+      status: "paused",
+      triggerConfig: {
+        type: "property_change",
+        objectType: "deal",
+        property: "stageId",
+      },
+      steps: [
+        {
+          id: "step_1",
+          type: "if_then",
+          name: "Check deal amount",
+          config: { property: "amount", operator: "greater_than", value: 10000 },
+          position: { x: 250, y: 180 },
+          nextTrue: ["step_2a"],
+          nextFalse: ["step_2b"],
+        },
+        {
+          id: "step_2a",
+          type: "send_notification",
+          name: "Notify manager",
+          config: { message: "High-value deal update" },
+          position: { x: 150, y: 340 },
+        },
+        {
+          id: "step_2b",
+          type: "create_task",
+          name: "Create follow-up",
+          config: { subject: "Follow up on deal" },
+          position: { x: 350, y: 340 },
+        },
+      ],
+      createdBy: user.id,
+    },
+  });
+
+  console.log("✅ Created 3 workflows:", workflow1.name, workflow2.name, workflow3.name);
+
   console.log("🎉 Seeding completed!");
 }
 
