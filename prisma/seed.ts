@@ -78,13 +78,23 @@ async function main() {
   }
   console.log("✅ Created pipeline with", stages.length, "stages");
 
-  // Create sample contacts
+  // Create sample contacts with diverse lifecycle stages
   const contacts = [
-    { firstName: "John", lastName: "Doe", email: "john@example.com", phone: "+1234567890", lifecycleStage: "lead" },
-    { firstName: "Jane", lastName: "Smith", email: "jane@techcorp.com", phone: "+1234567891", lifecycleStage: "mql" },
-    { firstName: "Bob", lastName: "Johnson", email: "bob@startup.io", phone: "+1234567892", lifecycleStage: "sql" },
-    { firstName: "Alice", lastName: "Williams", email: "alice@enterprise.com", phone: "+1234567893", lifecycleStage: "customer" },
-    { firstName: "Charlie", lastName: "Brown", email: "charlie@agency.co", phone: "+1234567894", lifecycleStage: "opportunity" },
+    { firstName: "John", lastName: "Doe", email: "john@example.com", phone: "+1-555-0101", lifecycleStage: "lead", jobTitle: "Marketing Manager" },
+    { firstName: "Jane", lastName: "Smith", email: "jane@techcorp.com", phone: "+1-555-0102", lifecycleStage: "mql", jobTitle: "Sales Director" },
+    { firstName: "Bob", lastName: "Johnson", email: "bob@startup.io", phone: "+1-555-0103", lifecycleStage: "sql", jobTitle: "VP of Sales" },
+    { firstName: "Alice", lastName: "Williams", email: "alice@enterprise.com", phone: "+1-555-0104", lifecycleStage: "customer", jobTitle: "CEO" },
+    { firstName: "Charlie", lastName: "Brown", email: "charlie@agency.co", phone: "+1-555-0105", lifecycleStage: "opportunity", jobTitle: "CTO" },
+    { firstName: "Sarah", lastName: "Davis", email: "sarah@startup.com", phone: "+1-555-0106", lifecycleStage: "subscriber", jobTitle: "Product Manager" },
+    { firstName: "Michael", lastName: "Garcia", email: "michael@corp.com", phone: "+1-555-0107", lifecycleStage: "evangelist", jobTitle: "Head of Engineering" },
+    { firstName: "Emily", lastName: "Martinez", email: "emily@tech.io", phone: "+1-555-0108", lifecycleStage: "lead", jobTitle: "Designer" },
+    { firstName: "David", lastName: "Rodriguez", email: "david@agency.com", phone: "+1-555-0109", lifecycleStage: "mql", jobTitle: "Developer" },
+    { firstName: "Lisa", lastName: "Lopez", email: "lisa@enterprise.co", phone: "+1-555-0110", lifecycleStage: "sql", jobTitle: "CFO" },
+    { firstName: "James", lastName: "Wilson", email: "james@business.com", phone: "+1-555-0111", lifecycleStage: "customer", jobTitle: "COO" },
+    { firstName: "Jennifer", lastName: "Anderson", email: "jennifer@startup.net", phone: "+1-555-0112", lifecycleStage: "opportunity", jobTitle: "Founder" },
+    { firstName: "Robert", lastName: "Taylor", email: "robert@tech.com", phone: "+1-555-0113", lifecycleStage: "subscriber", jobTitle: "Engineer" },
+    { firstName: "Mary", lastName: "Thomas", email: "mary@corp.io", phone: "+1-555-0114", lifecycleStage: "lead", jobTitle: "Analyst" },
+    { firstName: "Christopher", lastName: "Moore", email: "chris@company.com", phone: "+1-555-0115", lifecycleStage: "evangelist", jobTitle: "Director" },
   ];
 
   for (const contact of contacts) {
@@ -170,6 +180,114 @@ async function main() {
     });
   }
   console.log("✅ Created", activities.length, "activities");
+
+  // Create default property definitions
+  const propertyDefs = [
+    // Contact properties - About
+    { objectType: "contact", name: "first_name", label: "First Name", fieldType: "text", groupName: "About", orderIndex: 0, isSystem: true, isRequired: true },
+    { objectType: "contact", name: "last_name", label: "Last Name", fieldType: "text", groupName: "About", orderIndex: 1, isSystem: true, isRequired: true },
+    { objectType: "contact", name: "email", label: "Email", fieldType: "email", groupName: "About", orderIndex: 2, isSystem: true },
+    { objectType: "contact", name: "phone", label: "Phone Number", fieldType: "phone", groupName: "About", orderIndex: 3, isSystem: true },
+    { objectType: "contact", name: "job_title", label: "Job Title", fieldType: "text", groupName: "About", orderIndex: 4, isSystem: true },
+    { objectType: "contact", name: "lifecycle_stage", label: "Lifecycle Stage", fieldType: "select", groupName: "About", orderIndex: 5, isSystem: true, options: [
+      { value: "subscriber", label: "Subscriber" },
+      { value: "lead", label: "Lead" },
+      { value: "mql", label: "Marketing Qualified Lead" },
+      { value: "sql", label: "Sales Qualified Lead" },
+      { value: "opportunity", label: "Opportunity" },
+      { value: "customer", label: "Customer" },
+      { value: "evangelist", label: "Evangelist" },
+    ]},
+    { objectType: "contact", name: "lead_status", label: "Lead Status", fieldType: "select", groupName: "About", orderIndex: 6, isSystem: true, options: [
+      { value: "new", label: "New" },
+      { value: "open", label: "Open" },
+      { value: "in_progress", label: "In Progress" },
+      { value: "qualified", label: "Qualified" },
+      { value: "unqualified", label: "Unqualified" },
+    ]},
+    // Contact properties - Contact Information
+    { objectType: "contact", name: "mobile_phone", label: "Mobile Phone", fieldType: "phone", groupName: "Contact Information", orderIndex: 0, isSystem: true },
+    { objectType: "contact", name: "website", label: "Website", fieldType: "url", groupName: "Contact Information", orderIndex: 1, isSystem: true },
+    { objectType: "contact", name: "linkedin_url", label: "LinkedIn", fieldType: "url", groupName: "Contact Information", orderIndex: 2, isSystem: true },
+    { objectType: "contact", name: "twitter_handle", label: "Twitter", fieldType: "text", groupName: "Contact Information", orderIndex: 3, isSystem: true },
+    // Contact properties - Address
+    { objectType: "contact", name: "address", label: "Street Address", fieldType: "text", groupName: "Address", orderIndex: 0, isSystem: true },
+    { objectType: "contact", name: "city", label: "City", fieldType: "text", groupName: "Address", orderIndex: 1, isSystem: true },
+    { objectType: "contact", name: "state", label: "State/Region", fieldType: "text", groupName: "Address", orderIndex: 2, isSystem: true },
+    { objectType: "contact", name: "country", label: "Country", fieldType: "text", groupName: "Address", orderIndex: 3, isSystem: true },
+    { objectType: "contact", name: "postal_code", label: "Postal Code", fieldType: "text", groupName: "Address", orderIndex: 4, isSystem: true },
+
+    // Company properties - About
+    { objectType: "company", name: "name", label: "Company Name", fieldType: "text", groupName: "About", orderIndex: 0, isSystem: true, isRequired: true },
+    { objectType: "company", name: "domain", label: "Domain", fieldType: "url", groupName: "About", orderIndex: 1, isSystem: true },
+    { objectType: "company", name: "industry", label: "Industry", fieldType: "select", groupName: "About", orderIndex: 2, isSystem: true, options: [
+      { value: "technology", label: "Technology" },
+      { value: "software", label: "Software" },
+      { value: "consulting", label: "Consulting" },
+      { value: "marketing", label: "Marketing" },
+      { value: "finance", label: "Finance" },
+      { value: "healthcare", label: "Healthcare" },
+      { value: "education", label: "Education" },
+      { value: "retail", label: "Retail" },
+      { value: "manufacturing", label: "Manufacturing" },
+      { value: "other", label: "Other" },
+    ]},
+    { objectType: "company", name: "size", label: "Company Size", fieldType: "select", groupName: "About", orderIndex: 3, isSystem: true, options: [
+      { value: "1-10", label: "1-10" },
+      { value: "11-50", label: "11-50" },
+      { value: "51-200", label: "51-200" },
+      { value: "201-500", label: "201-500" },
+      { value: "501-1000", label: "501-1000" },
+      { value: "1001-5000", label: "1001-5000" },
+      { value: "5001+", label: "5001+" },
+    ]},
+    { objectType: "company", name: "type", label: "Company Type", fieldType: "select", groupName: "About", orderIndex: 4, isSystem: true, options: [
+      { value: "prospect", label: "Prospect" },
+      { value: "partner", label: "Partner" },
+      { value: "reseller", label: "Reseller" },
+      { value: "vendor", label: "Vendor" },
+      { value: "other", label: "Other" },
+    ]},
+    { objectType: "company", name: "annual_revenue", label: "Annual Revenue", fieldType: "number", groupName: "About", orderIndex: 5, isSystem: true },
+    { objectType: "company", name: "description", label: "Description", fieldType: "text", groupName: "About", orderIndex: 6, isSystem: true },
+    // Company properties - Contact Info
+    { objectType: "company", name: "phone", label: "Phone", fieldType: "phone", groupName: "Contact Information", orderIndex: 0, isSystem: true },
+    { objectType: "company", name: "website", label: "Website", fieldType: "url", groupName: "Contact Information", orderIndex: 1, isSystem: true },
+    { objectType: "company", name: "linkedin_url", label: "LinkedIn", fieldType: "url", groupName: "Contact Information", orderIndex: 2, isSystem: true },
+
+    // Deal properties - About
+    { objectType: "deal", name: "name", label: "Deal Name", fieldType: "text", groupName: "About", orderIndex: 0, isSystem: true, isRequired: true },
+    { objectType: "deal", name: "amount", label: "Amount", fieldType: "number", groupName: "About", orderIndex: 1, isSystem: true },
+    { objectType: "deal", name: "close_date", label: "Close Date", fieldType: "date", groupName: "About", orderIndex: 2, isSystem: true },
+    { objectType: "deal", name: "deal_type", label: "Deal Type", fieldType: "select", groupName: "About", orderIndex: 3, isSystem: true, options: [
+      { value: "newbusiness", label: "New Business" },
+      { value: "existingbusiness", label: "Existing Business" },
+    ]},
+    { objectType: "deal", name: "priority", label: "Priority", fieldType: "select", groupName: "About", orderIndex: 4, isSystem: true, options: [
+      { value: "low", label: "Low" },
+      { value: "medium", label: "Medium" },
+      { value: "high", label: "High" },
+    ]},
+    { objectType: "deal", name: "description", label: "Description", fieldType: "text", groupName: "About", orderIndex: 5, isSystem: true },
+  ];
+
+  for (const prop of propertyDefs) {
+    await prisma.propertyDefinition.upsert({
+      where: {
+        tenantId_objectType_name: {
+          tenantId: tenant.id,
+          objectType: prop.objectType,
+          name: prop.name,
+        },
+      },
+      update: {},
+      create: {
+        tenantId: tenant.id,
+        ...prop,
+      },
+    });
+  }
+  console.log("✅ Created", propertyDefs.length, "property definitions");
 
   console.log("🎉 Seeding completed!");
 }

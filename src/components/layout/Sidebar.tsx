@@ -8,6 +8,7 @@ import {
   Users,
   Building2,
   Handshake,
+  Activity,
   Mail,
   BarChart3,
   Settings,
@@ -47,6 +48,7 @@ const MAIN_NAV_ITEMS: NavItem[] = [
   { id: "contacts", label: "Contacts", icon: Users, href: "/contacts", badge: 12 },
   { id: "companies", label: "Companies", icon: Building2, href: "/companies" },
   { id: "deals", label: "Deals", icon: Handshake, href: "/deals", badge: 5 },
+  { id: "activities", label: "Activities", icon: Activity, href: "/activities" },
   { id: "marketing", label: "Marketing", icon: Mail, href: "/marketing" },
   { id: "reports", label: "Reports", icon: BarChart3, href: "/reports" },
 ];
