@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { Sidebar, type NavItem } from "@/components/layout/Sidebar";
 
 /**
- * HubSpot Clone - Sidebar Demo
+ * F-CORE - CRM Platform
  * Demonstrates the Sidebar component with Dark Mode toggle
  */
 export default function Home() {
@@ -45,7 +45,7 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground">
-                HubSpot Clone
+                F-CORE
               </h1>
               <p className="text-muted-foreground mt-1">
                 Sidebar built with Tailwind Design System & Vercel Best Practices

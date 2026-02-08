@@ -56,7 +56,7 @@ export default function FeaturesSection() {
             Everything you need to grow better
           </h2>
           <p className="text-lg text-gray-600">
-            HubSpot brings your marketing, sales, and service teams together with
+            F-CORE brings your marketing, sales, and service teams together with
             tools that are powerful alone, but better together.
           </p>
         </div>

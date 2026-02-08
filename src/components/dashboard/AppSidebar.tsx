@@ -9,6 +9,7 @@ import {
   Building2,
   CircleDollarSign,
   CalendarCheck,
+  Video,
   BarChart3,
   Settings,
   ChevronLeft,
@@ -24,6 +25,7 @@ const navigation = [
   { name: "Contacts", href: "/contacts", icon: Users },
   { name: "Companies", href: "/companies", icon: Building2 },
   { name: "Deals", href: "/deals", icon: CircleDollarSign },
+  { name: "Meetings", href: "/meetings", icon: Video },
   { name: "Tasks", href: "/tasks", icon: CalendarCheck },
   { name: "Reports", href: "/reports", icon: BarChart3 },
 ];

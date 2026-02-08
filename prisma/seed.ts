@@ -171,6 +171,136 @@ async function main() {
   }
   console.log("✅ Created", activities.length, "activities");
 
+  // Create sample meeting types
+  const meetingTypes = [
+    {
+      id: "meeting-type-1",
+      name: "Quick Chat",
+      slug: "quick-chat",
+      description: "A brief 15-minute introductory call",
+      duration: 15,
+      color: "#0891b2",
+      locationType: "video",
+    },
+    {
+      id: "meeting-type-2",
+      name: "Product Demo",
+      slug: "product-demo",
+      description: "30-minute product demonstration and Q&A",
+      duration: 30,
+      color: "#0ea5e9",
+      bufferAfter: 15,
+      locationType: "video",
+    },
+    {
+      id: "meeting-type-3",
+      name: "Strategy Session",
+      slug: "strategy-session",
+      description: "60-minute deep-dive strategy consultation",
+      duration: 60,
+      color: "#8b5cf6",
+      bufferBefore: 5,
+      bufferAfter: 15,
+      locationType: "video",
+    },
+  ];
+
+  for (const mt of meetingTypes) {
+    const meetingType = await prisma.meetingType.upsert({
+      where: { id: mt.id },
+      update: {},
+      create: {
+        id: mt.id,
+        tenantId: tenant.id,
+        userId: user.id,
+        name: mt.name,
+        slug: mt.slug,
+        description: mt.description,
+        duration: mt.duration,
+        color: mt.color,
+        bufferBefore: mt.bufferBefore || 0,
+        bufferAfter: mt.bufferAfter || 15,
+        locationType: mt.locationType || "video",
+      },
+    });
+
+    // Create default availability (Mon-Fri 9:00-17:00)
+    const existingAvail = await prisma.meetingAvailability.findFirst({
+      where: { meetingTypeId: meetingType.id },
+    });
+
+    if (!existingAvail) {
+      await prisma.meetingAvailability.createMany({
+        data: [1, 2, 3, 4, 5].map((day) => ({
+          meetingTypeId: meetingType.id,
+          dayOfWeek: day,
+          startTime: "09:00",
+          endTime: "17:00",
+          timezone: "UTC",
+        })),
+      });
+    }
+  }
+  console.log("✅ Created", meetingTypes.length, "meeting types with availability");
+
+  // Create sample bookings
+  const bookings = [
+    {
+      meetingTypeId: "meeting-type-2",
+      inviteeName: "John Doe",
+      inviteeEmail: "john@example.com",
+      inviteeCompany: "TechCorp Inc",
+      startOffset: 2, // days from now
+      status: "scheduled",
+    },
+    {
+      meetingTypeId: "meeting-type-1",
+      inviteeName: "Jane Smith",
+      inviteeEmail: "jane@techcorp.com",
+      startOffset: 4,
+      status: "scheduled",
+    },
+    {
+      meetingTypeId: "meeting-type-3",
+      inviteeName: "Bob Johnson",
+      inviteeEmail: "bob@startup.io",
+      inviteeCompany: "StartupIO",
+      startOffset: -3,
+      status: "completed",
+    },
+  ];
+
+  for (let i = 0; i < bookings.length; i++) {
+    const b = bookings[i];
+    const mt = meetingTypes.find((m) => m.id === b.meetingTypeId)!;
+    const startTime = new Date();
+    startTime.setDate(startTime.getDate() + b.startOffset);
+    startTime.setHours(10 + i, 0, 0, 0);
+    const endTime = new Date(startTime.getTime() + mt.duration * 60000);
+
+    const contactId = `contact-${b.inviteeEmail}`;
+    const contactExists = contacts.find((c) => c.email === b.inviteeEmail);
+
+    await prisma.meetingBooking.upsert({
+      where: { id: `booking-${i + 1}` },
+      update: {},
+      create: {
+        id: `booking-${i + 1}`,
+        tenantId: tenant.id,
+        meetingTypeId: b.meetingTypeId,
+        startTime,
+        endTime,
+        timezone: "UTC",
+        status: b.status,
+        inviteeName: b.inviteeName,
+        inviteeEmail: b.inviteeEmail,
+        inviteeCompany: b.inviteeCompany,
+        contactId: contactExists ? contactId : null,
+      },
+    });
+  }
+  console.log("✅ Created", bookings.length, "meeting bookings");
+
   console.log("🎉 Seeding completed!");
 }
 

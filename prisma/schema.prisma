@@ -31,6 +31,7 @@ model User {
   companies     Company[] @relation("CompanyOwner")
   deals         Deal[]    @relation("DealOwner")
   activities    Activity[]
+  meetingTypes  MeetingType[]
 
   @@index([tenantId])
   @@index([email])
@@ -52,6 +53,8 @@ model Tenant {
   deals         Deal[]
   activities    Activity[]
   pipelines     Pipeline[]
+  meetingTypes  MeetingType[]
+  meetingBookings MeetingBooking[]
 }
 
 // ============================================
@@ -104,6 +107,7 @@ model Contact {
   companies       ContactCompany[]
   deals           DealContact[]
   activities      Activity[]
+  meetingBookings MeetingBooking[]
 
   @@index([tenantId])
   @@index([email])
@@ -160,6 +164,7 @@ model Company {
   contacts        ContactCompany[]
   deals           DealCompany[]
   activities      Activity[]
+  meetingBookings MeetingBooking[]
 
   @@index([tenantId])
   @@index([domain])
@@ -210,6 +215,7 @@ model Deal {
   contacts        DealContact[]
   companies       DealCompany[]
   activities      Activity[]
+  meetingBookings MeetingBooking[]
 
   @@index([tenantId])
   @@index([pipelineId])
@@ -317,6 +323,7 @@ model Activity {
   contact         Contact?  @relation(fields: [contactId], references: [id])
   company         Company?  @relation(fields: [companyId], references: [id])
   deal            Deal?     @relation(fields: [dealId], references: [id])
+  meetingBooking  MeetingBooking?
 
   @@index([tenantId])
   @@index([type])
@@ -406,4 +413,121 @@ model PropertyDefinition {
 
   @@unique([tenantId, objectType, name])
   @@index([tenantId, objectType])
+}
+
+// ============================================
+// MEETING SCHEDULER
+// ============================================
+
+model MeetingType {
+  id              String    @id @default(uuid())
+  tenantId        String
+  userId          String
+
+  // Basic Info
+  name            String
+  slug            String
+  description     String?   @db.Text
+  duration        Int       // minutes
+
+  // Settings
+  color           String?
+  bufferBefore    Int       @default(0)
+  bufferAfter     Int       @default(15)
+  minNotice       Int       @default(240)  // minutes
+  maxAdvance      Int       @default(30)   // days
+  locationType    String    @default("video") // video, phone, in_person, custom
+  locationValue   String?
+  customFields    Json      @default("[]")
+
+  isActive        Boolean   @default(true)
+
+  // Audit
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  // Relations
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  user            User      @relation(fields: [userId], references: [id])
+  availability    MeetingAvailability[]
+  bookings        MeetingBooking[]
+
+  @@unique([userId, slug])
+  @@index([tenantId])
+  @@index([userId])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model MeetingAvailability {
+  id              String    @id @default(uuid())
+  meetingTypeId   String
+
+  dayOfWeek       Int       // 0=Sunday ... 6=Saturday
+  startTime       String    // "09:00"
+  endTime         String    // "17:00"
+  timezone        String    @default("UTC")
+  isActive        Boolean   @default(true)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  meetingType     MeetingType @relation(fields: [meetingTypeId], references: [id], onDelete: Cascade)
+
+  @@index([meetingTypeId])
+  @@index([dayOfWeek])
+}
+
+model MeetingBooking {
+  id              String    @id @default(uuid())
+  tenantId        String
+  meetingTypeId   String
+
+  // Scheduling
+  startTime       DateTime
+  endTime         DateTime
+  timezone        String
+  status          String    @default("scheduled") // scheduled, completed, cancelled, no_show
+
+  // Invitee info
+  inviteeName     String
+  inviteeEmail    String
+  inviteeCompany  String?
+  inviteePhone    String?
+  notes           String?   @db.Text
+  customResponses Json      @default("{}")
+
+  // CRM Associations
+  contactId       String?
+  companyId       String?
+  dealId          String?
+  activityId      String?   @unique
+
+  // Cancellation
+  cancelledAt     DateTime?
+  cancelReason    String?
+  cancelledBy     String?
+
+  metadata        Json      @default("{}")
+
+  // Audit
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  meetingType     MeetingType @relation(fields: [meetingTypeId], references: [id])
+  contact         Contact?  @relation(fields: [contactId], references: [id])
+  company         Company?  @relation(fields: [companyId], references: [id])
+  deal            Deal?     @relation(fields: [dealId], references: [id])
+  activity        Activity? @relation(fields: [activityId], references: [id])
+
+  @@index([tenantId])
+  @@index([meetingTypeId])
+  @@index([startTime])
+  @@index([inviteeEmail])
+  @@index([contactId])
+  @@index([status])
 }
