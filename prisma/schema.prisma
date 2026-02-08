@@ -31,6 +31,8 @@ model User {
   companies     Company[] @relation("CompanyOwner")
   deals         Deal[]    @relation("DealOwner")
   activities    Activity[]
+  emailsSent    Email[]
+  emailTemplates EmailTemplate[] @relation("EmailTemplateCreator")
 
   @@index([tenantId])
   @@index([email])
@@ -52,6 +54,8 @@ model Tenant {
   deals         Deal[]
   activities    Activity[]
   pipelines     Pipeline[]
+  emails        Email[]
+  emailTemplates EmailTemplate[]
 }
 
 // ============================================
@@ -104,6 +108,7 @@ model Contact {
   companies       ContactCompany[]
   deals           DealContact[]
   activities      Activity[]
+  emails          Email[]
 
   @@index([tenantId])
   @@index([email])
@@ -154,12 +159,13 @@ model Company {
   createdBy       String?
   updatedBy       String?
 
-  // Relations
+  // Relations (Company)
   tenant          Tenant    @relation(fields: [tenantId], references: [id])
   owner           User?     @relation("CompanyOwner", fields: [ownerId], references: [id])
   contacts        ContactCompany[]
   deals           DealCompany[]
   activities      Activity[]
+  emails          Email[]    @relation("CompanyEmails")
 
   @@index([tenantId])
   @@index([domain])
@@ -202,7 +208,7 @@ model Deal {
   createdBy       String?
   updatedBy       String?
 
-  // Relations
+  // Relations (Deal)
   tenant          Tenant    @relation(fields: [tenantId], references: [id])
   owner           User?     @relation("DealOwner", fields: [ownerId], references: [id])
   pipeline        Pipeline  @relation(fields: [pipelineId], references: [id])
@@ -210,6 +216,7 @@ model Deal {
   contacts        DealContact[]
   companies       DealCompany[]
   activities      Activity[]
+  emails          Email[]    @relation("DealEmails")
 
   @@index([tenantId])
   @@index([pipelineId])
@@ -406,4 +413,179 @@ model PropertyDefinition {
 
   @@unique([tenantId, objectType, name])
   @@index([tenantId, objectType])
+}
+
+// ============================================
+// EMAIL TRACKING SYSTEM
+// ============================================
+
+model Email {
+  id              String    @id @default(uuid())
+  tenantId        String
+
+  // Email Identity
+  trackingId      String    @unique
+  messageId       String?   @unique
+  threadId        String?
+
+  // Threading (RFC 2822)
+  inReplyTo       String?
+  references      String?   @db.Text
+
+  // Sender & Recipients
+  fromEmail       String
+  fromName        String?
+  toRecipients    Json
+  ccRecipients    Json?
+  bccRecipients   Json?
+
+  // Content
+  subject         String?
+  bodyHtml        String?   @db.Text
+  bodyText        String?   @db.Text
+  bodyOriginal    String?   @db.Text
+
+  // Status & Tracking
+  status          String    @default("draft")
+  direction       String    @default("outbound")
+  sentAt          DateTime?
+  scheduledAt     DateTime?
+
+  // Tracking Metrics (denormalized)
+  openCount       Int       @default(0)
+  clickCount      Int       @default(0)
+  replyCount      Int       @default(0)
+  firstOpenedAt   DateTime?
+  lastOpenedAt    DateTime?
+  firstClickedAt  DateTime?
+
+  // Template Reference
+  templateId      String?
+
+  // CRM Associations
+  contactId       String?
+  companyId       String?
+  dealId          String?
+  ownerId         String?
+
+  // Metadata
+  metadata        Json      @default("{}")
+
+  // Audit
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  // Relations
+  tenant          Tenant         @relation(fields: [tenantId], references: [id])
+  contact         Contact?       @relation(fields: [contactId], references: [id])
+  company         Company?       @relation("CompanyEmails", fields: [companyId], references: [id])
+  deal            Deal?          @relation("DealEmails", fields: [dealId], references: [id])
+  owner           User?          @relation(fields: [ownerId], references: [id])
+  template        EmailTemplate? @relation(fields: [templateId], references: [id])
+  events          EmailEvent[]
+  attachments     EmailAttachment[]
+
+  @@index([tenantId])
+  @@index([trackingId])
+  @@index([threadId])
+  @@index([contactId])
+  @@index([companyId])
+  @@index([dealId])
+  @@index([ownerId])
+  @@index([status])
+  @@index([sentAt(sort: Desc)])
+  @@index([deletedAt])
+  @@index([tenantId, contactId, sentAt(sort: Desc)])
+}
+
+model EmailEvent {
+  id              String    @id @default(uuid())
+
+  // Event Data
+  emailId         String
+  eventType       String
+
+  // Click-specific
+  linkUrl         String?   @db.Text
+  linkId          String?
+
+  // Request Metadata
+  ipAddress       String?
+  userAgent       String?   @db.Text
+
+  // Geolocation (derived from IP)
+  country         String?
+  city            String?
+
+  // Metadata
+  metadata        Json      @default("{}")
+
+  // Timestamp (append-only)
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  email           Email     @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@index([emailId])
+  @@index([eventType])
+  @@index([emailId, eventType])
+  @@index([createdAt(sort: Desc)])
+  @@index([emailId, createdAt(sort: Desc)])
+}
+
+model EmailTemplate {
+  id              String    @id @default(uuid())
+  tenantId        String
+
+  // Template Content
+  name            String
+  subject         String?
+  bodyHtml        String?   @db.Text
+  bodyText        String?   @db.Text
+
+  // Organization
+  category        String?
+  isShared        Boolean   @default(false)
+  isActive        Boolean   @default(true)
+
+  // Usage Stats (denormalized)
+  useCount        Int       @default(0)
+  lastUsedAt      DateTime?
+
+  // Owner
+  createdById     String?
+
+  // Audit
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  // Relations
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  createdBy       User?     @relation("EmailTemplateCreator", fields: [createdById], references: [id])
+  emails          Email[]
+
+  @@index([tenantId])
+  @@index([tenantId, category])
+  @@index([tenantId, isShared])
+  @@index([createdById])
+  @@index([deletedAt])
+}
+
+model EmailAttachment {
+  id              String    @id @default(uuid())
+
+  emailId         String
+  fileName        String
+  fileSize        Int
+  mimeType        String
+  storageUrl      String
+
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  email           Email     @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@index([emailId])
 }
