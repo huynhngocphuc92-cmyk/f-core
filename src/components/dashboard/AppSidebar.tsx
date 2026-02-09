@@ -17,6 +17,7 @@ import {
   Bell,
   HelpCircle,
   Plus,
+  Ticket,
 } from "lucide-react";
 
 const navigation = [
@@ -24,6 +25,7 @@ const navigation = [
   { name: "Contacts", href: "/contacts", icon: Users },
   { name: "Companies", href: "/companies", icon: Building2 },
   { name: "Deals", href: "/deals", icon: CircleDollarSign },
+  { name: "Tickets", href: "/tickets", icon: Ticket },
   { name: "Tasks", href: "/tasks", icon: CalendarCheck },
   { name: "Reports", href: "/reports", icon: BarChart3 },
 ];

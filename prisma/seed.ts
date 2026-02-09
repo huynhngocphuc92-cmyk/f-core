@@ -171,6 +171,228 @@ async function main() {
   }
   console.log("✅ Created", activities.length, "activities");
 
+  // ============================================
+  // TICKETING SYSTEM SEED DATA
+  // ============================================
+
+  // Create ticket pipeline with stages
+  const ticketPipeline = await prisma.ticketPipeline.upsert({
+    where: { id: "ticket-pipeline-default" },
+    update: {},
+    create: {
+      id: "ticket-pipeline-default",
+      name: "Support Pipeline",
+      description: "Default support ticket pipeline",
+      isDefault: true,
+      tenantId: tenant.id,
+    },
+  });
+
+  const ticketStages = [
+    { name: "New", displayOrder: 0, type: "open", color: "#3B82F6" },
+    { name: "Waiting on contact", displayOrder: 1, type: "waiting", color: "#F59E0B" },
+    { name: "Waiting on us", displayOrder: 2, type: "in_progress", color: "#8B5CF6" },
+    { name: "Resolved", displayOrder: 3, type: "resolved", color: "#10B981" },
+    { name: "Closed", displayOrder: 4, type: "closed", color: "#6B7280" },
+  ];
+
+  const createdTicketStages: string[] = [];
+  for (let i = 0; i < ticketStages.length; i++) {
+    const stage = await prisma.ticketPipelineStage.upsert({
+      where: { id: `ticket-stage-${i + 1}` },
+      update: {},
+      create: {
+        id: `ticket-stage-${i + 1}`,
+        pipelineId: ticketPipeline.id,
+        ...ticketStages[i],
+      },
+    });
+    createdTicketStages.push(stage.id);
+  }
+  console.log("✅ Created ticket pipeline with", ticketStages.length, "stages");
+
+  // Create SLA policies
+  const slaPolicies = [
+    { name: "Urgent Support", priority: "urgent", firstResponseTime: 30, nextResponseTime: 30, resolutionTime: 240 },
+    { name: "High Priority", priority: "high", firstResponseTime: 60, nextResponseTime: 120, resolutionTime: 480 },
+    { name: "Medium Priority", priority: "medium", firstResponseTime: 240, nextResponseTime: 480, resolutionTime: 1440 },
+    { name: "Low Priority", priority: "low", firstResponseTime: 480, nextResponseTime: 1440, resolutionTime: 4320 },
+  ];
+
+  const createdSLAs: string[] = [];
+  for (const sla of slaPolicies) {
+    const created = await prisma.ticketSLAPolicy.upsert({
+      where: {
+        tenantId_priority: { tenantId: tenant.id, priority: sla.priority },
+      },
+      update: {},
+      create: {
+        tenantId: tenant.id,
+        ...sla,
+      },
+    });
+    createdSLAs.push(created.id);
+  }
+  console.log("✅ Created", slaPolicies.length, "SLA policies");
+
+  // Create ticket counter
+  await prisma.ticketCounter.upsert({
+    where: { tenantId: tenant.id },
+    update: { lastNumber: 6 },
+    create: {
+      tenantId: tenant.id,
+      lastNumber: 6,
+    },
+  });
+
+  // Create sample tickets
+  const sampleTickets = [
+    {
+      ticketNumber: 1,
+      title: "Cannot login to dashboard",
+      description: "I'm getting a 403 error when trying to access the dashboard after login.",
+      priority: "urgent",
+      status: "in_progress",
+      category: "bug",
+      source: "email",
+      contactId: `contact-${contacts[0].email}`,
+      companyId: `company-${companies[0].domain}`,
+      stageId: createdTicketStages[2], // Waiting on us
+      slaId: createdSLAs[0], // Urgent SLA
+    },
+    {
+      ticketNumber: 2,
+      title: "Feature request: Export to CSV",
+      description: "Would love to be able to export my contacts list to CSV format for offline analysis.",
+      priority: "low",
+      status: "open",
+      category: "feature_request",
+      source: "web",
+      contactId: `contact-${contacts[1].email}`,
+      companyId: `company-${companies[0].domain}`,
+      stageId: createdTicketStages[0], // New
+      slaId: createdSLAs[3], // Low SLA
+    },
+    {
+      ticketNumber: 3,
+      title: "Billing discrepancy on last invoice",
+      description: "Our last invoice shows charges for 50 users but we only have 35 active users.",
+      priority: "high",
+      status: "waiting",
+      category: "billing",
+      source: "phone",
+      contactId: `contact-${contacts[3].email}`,
+      companyId: `company-${companies[2].domain}`,
+      stageId: createdTicketStages[1], // Waiting on contact
+      slaId: createdSLAs[1], // High SLA
+      firstResponseAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+    },
+    {
+      ticketNumber: 4,
+      title: "How to set up email integration?",
+      description: "I need help configuring the email integration with our Gmail workspace.",
+      priority: "medium",
+      status: "resolved",
+      category: "question",
+      source: "chat",
+      contactId: `contact-${contacts[2].email}`,
+      companyId: `company-${companies[1].domain}`,
+      stageId: createdTicketStages[3], // Resolved
+      slaId: createdSLAs[2], // Medium SLA
+      firstResponseAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      resolvedAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
+    },
+    {
+      ticketNumber: 5,
+      title: "API rate limiting errors",
+      description: "We're hitting rate limits on the API when syncing contacts. Need higher limits or guidance on batching.",
+      priority: "high",
+      status: "in_progress",
+      category: "bug",
+      source: "api",
+      contactId: `contact-${contacts[4].email}`,
+      companyId: `company-${companies[3].domain}`,
+      stageId: createdTicketStages[2], // Waiting on us
+      slaId: createdSLAs[1], // High SLA
+    },
+    {
+      ticketNumber: 6,
+      title: "Onboarding assistance needed",
+      description: "New customer needs help getting started with the platform. Requested a walkthrough session.",
+      priority: "medium",
+      status: "closed",
+      category: "question",
+      source: "web",
+      contactId: `contact-${contacts[1].email}`,
+      stageId: createdTicketStages[4], // Closed
+      slaId: createdSLAs[2], // Medium SLA
+      firstResponseAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      resolvedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      closedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    },
+  ];
+
+  for (const ticket of sampleTickets) {
+    await prisma.ticket.upsert({
+      where: {
+        tenantId_ticketNumber: { tenantId: tenant.id, ticketNumber: ticket.ticketNumber },
+      },
+      update: {},
+      create: {
+        tenantId: tenant.id,
+        assignedToUserId: user.id,
+        createdById: user.id,
+        pipelineId: ticketPipeline.id,
+        ...ticket,
+      },
+    });
+  }
+  console.log("✅ Created", sampleTickets.length, "tickets");
+
+  // Create sample ticket comments
+  const ticketForComments = await prisma.ticket.findFirst({
+    where: { tenantId: tenant.id, ticketNumber: 1 },
+  });
+
+  if (ticketForComments) {
+    const ticketComments = [
+      { content: "I've been unable to log in since this morning. Getting a 403 Forbidden error on /dashboard.", isInternal: false },
+      { content: "Checked the auth logs - looks like the user's session token expired and isn't being refreshed. Investigating the token refresh flow.", isInternal: true },
+      { content: "We've identified the issue with your login. A fix is being deployed now. Can you try clearing your browser cache and logging in again?", isInternal: false },
+    ];
+
+    for (const comment of ticketComments) {
+      await prisma.ticketComment.create({
+        data: {
+          ticketId: ticketForComments.id,
+          authorId: user.id,
+          ...comment,
+        },
+      });
+    }
+    console.log("✅ Created", ticketComments.length, "ticket comments");
+
+    // Create ticket activity entries
+    const ticketActivities = [
+      { type: "created", description: "Ticket created", metadata: {} },
+      { type: "assignment_change", field: "assignedToUserId", oldValue: null, newValue: user.id, description: `Assigned to ${user.name}` },
+      { type: "stage_change", field: "stageId", oldValue: createdTicketStages[0], newValue: createdTicketStages[2], description: "Stage changed from New to Waiting on us" },
+      { type: "comment_added", description: "Public comment added" },
+    ];
+
+    for (const activity of ticketActivities) {
+      await prisma.ticketActivity.create({
+        data: {
+          ticketId: ticketForComments.id,
+          tenantId: tenant.id,
+          performedById: user.id,
+          ...activity,
+        },
+      });
+    }
+    console.log("✅ Created", ticketActivities.length, "ticket activities");
+  }
+
   console.log("🎉 Seeding completed!");
 }
 

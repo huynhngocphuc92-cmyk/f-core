@@ -31,6 +31,10 @@ model User {
   companies     Company[] @relation("CompanyOwner")
   deals         Deal[]    @relation("DealOwner")
   activities    Activity[]
+  assignedTickets   Ticket[]          @relation("TicketAssignee")
+  createdTickets    Ticket[]          @relation("TicketCreator")
+  ticketComments    TicketComment[]
+  ticketActivities  TicketActivity[]
 
   @@index([tenantId])
   @@index([email])
@@ -52,6 +56,10 @@ model Tenant {
   deals         Deal[]
   activities    Activity[]
   pipelines     Pipeline[]
+  ticketPipelines     TicketPipeline[]
+  ticketSLAPolicies   TicketSLAPolicy[]
+  tickets             Ticket[]
+  ticketCounters      TicketCounter?
 }
 
 // ============================================
@@ -104,6 +112,7 @@ model Contact {
   companies       ContactCompany[]
   deals           DealContact[]
   activities      Activity[]
+  tickets         Ticket[]
 
   @@index([tenantId])
   @@index([email])
@@ -160,6 +169,7 @@ model Company {
   contacts        ContactCompany[]
   deals           DealCompany[]
   activities      Activity[]
+  tickets         Ticket[]
 
   @@index([tenantId])
   @@index([domain])
@@ -406,4 +416,229 @@ model PropertyDefinition {
 
   @@unique([tenantId, objectType, name])
   @@index([tenantId, objectType])
+}
+
+// ============================================
+// TICKETING SYSTEM (Service Hub)
+// ============================================
+
+model Ticket {
+  id                String    @id @default(uuid())
+  tenantId          String
+
+  // Ticket Identity
+  ticketNumber      Int
+  title             String
+  description       String?   @db.Text
+
+  // Classification
+  priority          String    @default("medium")
+  status            String    @default("open")
+  category          String?
+  source            String    @default("web")
+
+  // Associations
+  contactId         String?
+  companyId         String?
+  assignedToUserId  String?
+  createdById       String?
+
+  // Pipeline
+  pipelineId        String
+  stageId           String
+
+  // SLA
+  slaId             String?
+  dueDate           DateTime?
+
+  // SLA Timestamps
+  firstResponseAt   DateTime?
+  resolvedAt        DateTime?
+  closedAt          DateTime?
+
+  // Flexible fields
+  tags              String[]  @default([])
+  customFields      Json      @default("{}")
+
+  // Audit
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  // Relations
+  tenant            Tenant               @relation(fields: [tenantId], references: [id])
+  contact           Contact?             @relation(fields: [contactId], references: [id])
+  company           Company?             @relation(fields: [companyId], references: [id])
+  assignedTo        User?                @relation("TicketAssignee", fields: [assignedToUserId], references: [id])
+  createdBy         User?                @relation("TicketCreator", fields: [createdById], references: [id])
+  pipeline          TicketPipeline       @relation(fields: [pipelineId], references: [id])
+  stage             TicketPipelineStage  @relation(fields: [stageId], references: [id])
+  sla               TicketSLAPolicy?     @relation(fields: [slaId], references: [id])
+  comments          TicketComment[]
+  activities        TicketActivity[]
+
+  @@unique([tenantId, ticketNumber])
+  @@index([tenantId])
+  @@index([status])
+  @@index([priority])
+  @@index([assignedToUserId])
+  @@index([contactId])
+  @@index([companyId])
+  @@index([pipelineId])
+  @@index([stageId])
+  @@index([slaId])
+  @@index([dueDate])
+  @@index([createdAt(sort: Desc)])
+  @@index([deletedAt])
+  @@index([tenantId, status])
+  @@index([tenantId, assignedToUserId, status])
+}
+
+model TicketComment {
+  id          String    @id @default(uuid())
+  ticketId    String
+  authorId    String?
+
+  // Content
+  content     String    @db.Text
+  isInternal  Boolean   @default(false)
+
+  // Attachments
+  attachments Json      @default("[]")
+
+  // Audit
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  // Relations
+  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author      User?     @relation(fields: [authorId], references: [id])
+
+  @@index([ticketId])
+  @@index([authorId])
+  @@index([createdAt(sort: Desc)])
+  @@index([isInternal])
+}
+
+model TicketPipeline {
+  id          String    @id @default(uuid())
+  tenantId    String
+
+  name        String
+  description String?
+  isDefault   Boolean   @default(false)
+
+  // Audit
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  // Relations
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  stages      TicketPipelineStage[]
+  tickets     Ticket[]
+
+  @@index([tenantId])
+  @@index([isDefault])
+}
+
+model TicketPipelineStage {
+  id            String    @id @default(uuid())
+  pipelineId    String
+
+  name          String
+  displayOrder  Int       @default(0)
+  type          String    @default("open")
+  color         String?
+
+  // Audit
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  pipeline      TicketPipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  tickets       Ticket[]
+
+  @@index([pipelineId])
+  @@index([displayOrder])
+}
+
+model TicketSLAPolicy {
+  id                  String    @id @default(uuid())
+  tenantId            String
+
+  name                String
+  description         String?
+
+  // Target priority
+  priority            String
+
+  // SLA Targets (in minutes)
+  firstResponseTime   Int
+  nextResponseTime    Int?
+  resolutionTime      Int
+
+  // Business hours
+  businessHoursOnly   Boolean   @default(true)
+  businessHoursStart  String    @default("09:00")
+  businessHoursEnd    String    @default("17:00")
+  businessDays        Int[]     @default([1, 2, 3, 4, 5])
+  timezone            String    @default("Asia/Ho_Chi_Minh")
+
+  // Status
+  isActive            Boolean   @default(true)
+
+  // Audit
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+
+  // Relations
+  tenant              Tenant    @relation(fields: [tenantId], references: [id])
+  tickets             Ticket[]
+
+  @@unique([tenantId, priority])
+  @@index([tenantId])
+  @@index([isActive])
+}
+
+model TicketActivity {
+  id              String    @id @default(uuid())
+  ticketId        String
+  tenantId        String
+
+  // Activity details
+  type            String
+  field           String?
+  oldValue        String?
+  newValue        String?
+  description     String?
+
+  // Who performed the action
+  performedById   String?
+
+  // Metadata
+  metadata        Json      @default("{}")
+
+  // Audit
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  ticket          Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  performedBy     User?     @relation(fields: [performedById], references: [id])
+
+  @@index([ticketId])
+  @@index([tenantId])
+  @@index([type])
+  @@index([createdAt(sort: Desc)])
+}
+
+model TicketCounter {
+  tenantId      String    @id
+  lastNumber    Int       @default(0)
+
+  // Relations
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
 }
