@@ -2,6 +2,8 @@ import { Plus, Search, Filter, Download, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 async function getContacts() {
   const contacts = await prisma.contact.findMany({
     where: { deletedAt: null },
