@@ -104,6 +104,7 @@ model Contact {
   companies       ContactCompany[]
   deals           DealContact[]
   activities      Activity[]
+  formSubmissions FormSubmission[]
 
   @@index([tenantId])
   @@index([email])
@@ -406,4 +407,91 @@ model PropertyDefinition {
 
   @@unique([tenantId, objectType, name])
   @@index([tenantId, objectType])
+}
+
+// ============================================
+// FORM BUILDER (Marketing Hub)
+// ============================================
+
+model Form {
+  id            String    @id @default(uuid())
+  tenantId      String
+
+  name          String
+  slug          String
+  description   String?
+
+  status        String    @default("draft") // draft, published, archived
+  settings      Json      @default("{}") // notifyEmails, autoResponder, captcha, honeypot, redirectUrl, thankYouMessage
+  theme         Json      @default("{}") // submitButtonText, submitButtonColor, backgroundColor, fontFamily, customCss
+
+  viewCount     Int       @default(0)
+
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  fields        FormField[]
+  submissions   FormSubmission[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model FormField {
+  id              String    @id @default(uuid())
+  formId          String
+
+  name            String    // internal field name
+  label           String
+  type            String    // text, email, phone, number, url, textarea, dropdown, multi_select, radio, checkbox, date, file, hidden, heading, paragraph, divider, spacer
+  placeholder     String?
+  helpText        String?
+  defaultValue    String?
+
+  required        Boolean   @default(false)
+  hidden          Boolean   @default(false)
+  width           String    @default("full") // full, half, third
+
+  orderIndex      Int       @default(0)
+
+  options         Json?     // [{value, label}] for select/radio/checkbox
+  validationRules Json?     // {minLength, maxLength, pattern, min, max}
+  conditionalLogic Json?    // {conditions: [{field, operator, value}], logicType: "all"|"any", action: "show"|"hide"|"require"}
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  form            Form      @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId])
+  @@index([orderIndex])
+}
+
+model FormSubmission {
+  id              String    @id @default(uuid())
+  formId          String
+  tenantId        String
+
+  data            Json      // {fieldName: value}
+  metadata        Json      @default("{}") // {ip, userAgent, referrer, utmSource, utmMedium, utmCampaign}
+
+  contactId       String?   // Auto-created or linked contact
+  isSpam          Boolean   @default(false)
+
+  submittedAt     DateTime  @default(now())
+
+  // Relations
+  form            Form      @relation(fields: [formId], references: [id], onDelete: Cascade)
+  contact         Contact?  @relation(fields: [contactId], references: [id])
+
+  @@index([formId])
+  @@index([tenantId])
+  @@index([submittedAt(sort: Desc)])
+  @@index([isSpam])
 }

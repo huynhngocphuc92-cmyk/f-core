@@ -171,6 +171,165 @@ async function main() {
   }
   console.log("✅ Created", activities.length, "activities");
 
+  // Create sample forms
+  const contactForm = await prisma.form.upsert({
+    where: { id: "form-contact-us" },
+    update: {},
+    create: {
+      id: "form-contact-us",
+      tenantId: tenant.id,
+      name: "Contact Us",
+      slug: "contact-us",
+      description: "Main website contact form",
+      status: "published",
+      publishedAt: new Date(),
+      viewCount: 342,
+      settings: {
+        thankYouMessage: "Thank you for reaching out! We'll get back to you within 24 hours.",
+        notifyEmails: ["admin@f-core.com"],
+        honeypotEnabled: true,
+      },
+      theme: {
+        submitButtonText: "Send Message",
+        submitButtonColor: "#0891b2",
+      },
+    },
+  });
+
+  const contactFormFields = [
+    { name: "first_name", label: "First Name", type: "text", required: true, width: "half", orderIndex: 0 },
+    { name: "last_name", label: "Last Name", type: "text", required: true, width: "half", orderIndex: 1 },
+    { name: "email", label: "Email Address", type: "email", required: true, placeholder: "you@company.com", orderIndex: 2 },
+    { name: "phone", label: "Phone Number", type: "phone", required: false, orderIndex: 3 },
+    { name: "company", label: "Company", type: "text", required: false, orderIndex: 4 },
+    { name: "message", label: "How can we help?", type: "textarea", required: true, placeholder: "Tell us about your needs...", orderIndex: 5 },
+  ];
+
+  for (const field of contactFormFields) {
+    await prisma.formField.upsert({
+      where: { id: `field-contact-${field.name}` },
+      update: {},
+      create: {
+        id: `field-contact-${field.name}`,
+        formId: contactForm.id,
+        ...field,
+      },
+    });
+  }
+
+  const newsletterForm = await prisma.form.upsert({
+    where: { id: "form-newsletter" },
+    update: {},
+    create: {
+      id: "form-newsletter",
+      tenantId: tenant.id,
+      name: "Newsletter Signup",
+      slug: "newsletter-signup",
+      description: "Email newsletter subscription form",
+      status: "published",
+      publishedAt: new Date(),
+      viewCount: 1205,
+      settings: {
+        thankYouMessage: "You're subscribed! Check your inbox for a confirmation email.",
+        honeypotEnabled: true,
+      },
+      theme: {
+        submitButtonText: "Subscribe",
+        submitButtonColor: "#0891b2",
+      },
+    },
+  });
+
+  await prisma.formField.upsert({
+    where: { id: "field-newsletter-email" },
+    update: {},
+    create: {
+      id: "field-newsletter-email",
+      formId: newsletterForm.id,
+      name: "email",
+      label: "Email Address",
+      type: "email",
+      required: true,
+      placeholder: "Enter your email",
+      orderIndex: 0,
+    },
+  });
+
+  const feedbackForm = await prisma.form.upsert({
+    where: { id: "form-feedback" },
+    update: {},
+    create: {
+      id: "form-feedback",
+      tenantId: tenant.id,
+      name: "Product Feedback",
+      slug: "product-feedback",
+      description: "Collect customer feedback about our products",
+      status: "draft",
+      viewCount: 0,
+      settings: {},
+      theme: {
+        submitButtonText: "Submit Feedback",
+        submitButtonColor: "#0891b2",
+      },
+    },
+  });
+
+  const feedbackFields = [
+    { name: "name", label: "Your Name", type: "text", required: true, orderIndex: 0 },
+    { name: "email", label: "Email", type: "email", required: true, orderIndex: 1 },
+    {
+      name: "rating",
+      label: "How would you rate our product?",
+      type: "radio",
+      required: true,
+      orderIndex: 2,
+      options: [
+        { value: "5", label: "Excellent" },
+        { value: "4", label: "Good" },
+        { value: "3", label: "Average" },
+        { value: "2", label: "Below Average" },
+        { value: "1", label: "Poor" },
+      ],
+    },
+    { name: "feedback", label: "Your Feedback", type: "textarea", required: false, placeholder: "Tell us what you think...", orderIndex: 3 },
+  ];
+
+  for (const field of feedbackFields) {
+    await prisma.formField.upsert({
+      where: { id: `field-feedback-${field.name}` },
+      update: {},
+      create: {
+        id: `field-feedback-${field.name}`,
+        formId: feedbackForm.id,
+        ...field,
+      },
+    });
+  }
+
+  // Create sample submissions for contact form
+  const sampleSubmissions = [
+    { data: { first_name: "Sarah", last_name: "Connor", email: "sarah@skynet.com", message: "Interested in your CRM solution" }, submittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+    { data: { first_name: "Michael", last_name: "Scott", email: "michael@dundermifflin.com", phone: "+15551234567", company: "Dunder Mifflin", message: "Need a demo for my team of 50" }, submittedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
+    { data: { first_name: "Tony", last_name: "Stark", email: "tony@stark.com", company: "Stark Industries", message: "Looking for enterprise pricing" }, submittedAt: new Date(Date.now() - 5 * 60 * 60 * 1000) },
+  ];
+
+  for (let i = 0; i < sampleSubmissions.length; i++) {
+    await prisma.formSubmission.upsert({
+      where: { id: `submission-${i + 1}` },
+      update: {},
+      create: {
+        id: `submission-${i + 1}`,
+        formId: contactForm.id,
+        tenantId: tenant.id,
+        data: sampleSubmissions[i].data,
+        submittedAt: sampleSubmissions[i].submittedAt,
+        metadata: { referrer: "https://f-core.com", userAgent: "Mozilla/5.0" },
+      },
+    });
+  }
+
+  console.log("✅ Created 3 forms with fields and submissions");
+
   console.log("🎉 Seeding completed!");
 }
 
