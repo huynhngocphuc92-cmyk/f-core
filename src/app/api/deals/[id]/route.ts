@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getTenantId, checkOwnership } from "@/lib/auth-helpers";
+import { handleApiError } from "@/lib/api-helpers";
 
-// GET /api/deals/[id]
+// GET /api/deals/[id] (with tenant check)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const tenantId = await getTenantId(request);
 
     const deal = await prisma.deal.findUnique({
       where: { id, deletedAt: null },
@@ -23,21 +26,37 @@ export async function GET(
       return NextResponse.json({ error: "Deal not found" }, { status: 404 });
     }
 
+    // Check tenant ownership
+    await checkOwnership(deal.tenantId, request);
+
     return NextResponse.json(deal);
   } catch (error) {
-    console.error("Error fetching deal:", error);
-    return NextResponse.json({ error: "Failed to fetch deal" }, { status: 500 });
+    return handleApiError(error);
   }
 }
 
-// PATCH /api/deals/[id] - Update deal (including stage change)
+// PATCH /api/deals/[id] - Update deal (with tenant check)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const tenantId = await getTenantId(request);
     const body = await request.json();
+
+    // Fetch deal first to verify ownership
+    const existingDeal = await prisma.deal.findUnique({
+      where: { id, deletedAt: null },
+      select: { tenantId: true },
+    });
+
+    if (!existingDeal) {
+      return NextResponse.json({ error: "Deal not found" }, { status: 404 });
+    }
+
+    // Check tenant ownership
+    await checkOwnership(existingDeal.tenantId, request);
 
     const updateData: Record<string, unknown> = {};
 
@@ -64,18 +83,31 @@ export async function PATCH(
 
     return NextResponse.json(deal);
   } catch (error) {
-    console.error("Error updating deal:", error);
-    return NextResponse.json({ error: "Failed to update deal" }, { status: 500 });
+    return handleApiError(error);
   }
 }
 
-// DELETE /api/deals/[id] - Soft delete
+// DELETE /api/deals/[id] - Soft delete (with tenant check)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const tenantId = await getTenantId(request);
+
+    // Fetch deal first to verify ownership
+    const existingDeal = await prisma.deal.findUnique({
+      where: { id, deletedAt: null },
+      select: { tenantId: true },
+    });
+
+    if (!existingDeal) {
+      return NextResponse.json({ error: "Deal not found" }, { status: 404 });
+    }
+
+    // Check tenant ownership
+    await checkOwnership(existingDeal.tenantId, request);
 
     await prisma.deal.update({
       where: { id },
@@ -84,7 +116,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting deal:", error);
-    return NextResponse.json({ error: "Failed to delete deal" }, { status: 500 });
+    return handleApiError(error);
   }
 }

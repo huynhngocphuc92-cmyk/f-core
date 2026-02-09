@@ -1,22 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getTenantId } from "@/lib/auth-helpers";
+import { validatePagination, buildWhereClause, paginatedResponse, handleApiError } from "@/lib/api-helpers";
 
-// GET /api/deals - List all deals
+// GET /api/deals - List all deals (with tenant isolation)
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50");
-    const pipelineId = searchParams.get("pipelineId");
-    const stageId = searchParams.get("stageId");
+    // Authentication & tenant isolation
+    const tenantId = await getTenantId(request);
+    
+    // Pagination
+    const { page, limit, skip } = validatePagination(request.nextUrl.searchParams);
+    
+    // Filters
+    const pipelineId = request.nextUrl.searchParams.get("pipelineId");
+    const stageId = request.nextUrl.searchParams.get("stageId");
 
-    const skip = (page - 1) * limit;
-
-    const where = {
+    const additionalWhere = {
       deletedAt: null,
       ...(pipelineId && { pipelineId }),
       ...(stageId && { stageId }),
     };
+
+    const where = buildWhereClause(tenantId, additionalWhere);
 
     const [deals, total] = await Promise.all([
       prisma.deal.findMany({
@@ -33,19 +39,18 @@ export async function GET(request: NextRequest) {
       prisma.deal.count({ where }),
     ]);
 
-    return NextResponse.json({
-      data: deals,
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
-    });
+    return paginatedResponse(deals, total, page, limit);
   } catch (error) {
-    console.error("Error fetching deals:", error);
-    return NextResponse.json({ error: "Failed to fetch deals", detail: error instanceof Error ? error.message : String(error) }, { status: 500 });
+    return handleApiError(error);
   }
 }
 
-// POST /api/deals - Create a new deal
+// POST /api/deals - Create a new deal (with tenant isolation)
 export async function POST(request: NextRequest) {
   try {
+    // Authentication & tenant isolation
+    const tenantId = await getTenantId(request);
+    
     const body = await request.json();
 
     if (!body.name || !body.pipelineId || !body.stageId) {
@@ -55,11 +60,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const tenantId = body.tenantId || "demo-tenant";
-
     const deal = await prisma.deal.create({
       data: {
-        tenantId,
+        tenantId,  // Use authenticated user's tenant, NOT from request body!
         name: body.name,
         description: body.description,
         amount: body.amount,
@@ -81,7 +84,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(deal, { status: 201 });
   } catch (error) {
-    console.error("Error creating deal:", error);
-    return NextResponse.json({ error: "Failed to create deal" }, { status: 500 });
+    return handleApiError(error);
   }
 }

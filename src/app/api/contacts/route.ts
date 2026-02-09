@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getTenantId } from "@/lib/auth-helpers";
+import { validatePagination, buildWhereClause, paginatedResponse, handleApiError } from "@/lib/api-helpers";
 
-// GET /api/contacts - List all contacts
+// GET /api/contacts - List all contacts (with tenant isolation)
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50");
-    const search = searchParams.get("search") || "";
-    const lifecycleStage = searchParams.get("lifecycleStage");
+    // Authentication & tenant isolation
+    const tenantId = await getTenantId(request);
+    
+    // Pagination
+    const { page, limit, skip } = validatePagination(request.nextUrl.searchParams);
+    
+    // Search filters
+    const search = request.nextUrl.searchParams.get("search") || "";
+    const lifecycleStage = request.nextUrl.searchParams.get("lifecycleStage");
 
-    const skip = (page - 1) * limit;
-
-    const where = {
+    const additionalWhere = {
       deletedAt: null,
       ...(search && {
         OR: [
@@ -23,6 +27,8 @@ export async function GET(request: NextRequest) {
       }),
       ...(lifecycleStage && { lifecycleStage }),
     };
+
+    const where = buildWhereClause(tenantId, additionalWhere);
 
     const [contacts, total] = await Promise.all([
       prisma.contact.findMany({
@@ -41,30 +47,21 @@ export async function GET(request: NextRequest) {
       prisma.contact.count({ where }),
     ]);
 
-    return NextResponse.json({
-      data: contacts,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    });
+    return paginatedResponse(contacts, total, page, limit);
   } catch (error) {
-    console.error("Error fetching contacts:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch contacts" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
-// POST /api/contacts - Create a new contact
+// POST /api/contacts - Create a new contact (with validation & tenant isolation)
 export async function POST(request: NextRequest) {
   try {
+    // Authentication & tenant isolation
+    const tenantId = await getTenantId(request);
+    
     const body = await request.json();
 
-    // Validate required fields
+    // Basic validation (Zod would be better but keeping it simple for now)
     if (!body.email && !body.firstName) {
       return NextResponse.json(
         { error: "Email or first name is required" },
@@ -72,12 +69,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Get tenantId from authenticated user session
-    const tenantId = body.tenantId || "demo-tenant";
-
     const contact = await prisma.contact.create({
       data: {
-        tenantId,
+        tenantId,  // Use authenticated user's tenant, NOT from request body!
         email: body.email,
         firstName: body.firstName,
         lastName: body.lastName,
@@ -104,10 +98,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(contact, { status: 201 });
   } catch (error) {
-    console.error("Error creating contact:", error);
-    return NextResponse.json(
-      { error: "Failed to create contact" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

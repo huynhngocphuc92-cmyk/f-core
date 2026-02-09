@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getTenantId, checkOwnership } from "@/lib/auth-helpers";
+import { handleApiError } from "@/lib/api-helpers";
 
-// GET /api/contacts/[id] - Get a single contact
+// GET /api/contacts/[id] - Get a single contact (with tenant check)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const tenantId = await getTenantId(request);
 
     const contact = await prisma.contact.findUnique({
       where: { id, deletedAt: null },
@@ -33,24 +36,40 @@ export async function GET(
       );
     }
 
+    // Check tenant ownership
+    await checkOwnership(contact.tenantId, request);
+
     return NextResponse.json(contact);
   } catch (error) {
-    console.error("Error fetching contact:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch contact" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
-// PATCH /api/contacts/[id] - Update a contact
+// PATCH /api/contacts/[id] - Update a contact (with tenant check)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const tenantId = await getTenantId(request);
     const body = await request.json();
+
+    // Fetch contact first to verify ownership
+    const existingContact = await prisma.contact.findUnique({
+      where: { id, deletedAt: null },
+      select: { tenantId: true },
+    });
+
+    if (!existingContact) {
+      return NextResponse.json(
+        { error: "Contact not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check tenant ownership
+    await checkOwnership(existingContact.tenantId, request);
 
     const contact = await prisma.contact.update({
       where: { id },
@@ -81,21 +100,34 @@ export async function PATCH(
 
     return NextResponse.json(contact);
   } catch (error) {
-    console.error("Error updating contact:", error);
-    return NextResponse.json(
-      { error: "Failed to update contact" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
-// DELETE /api/contacts/[id] - Soft delete a contact
+// DELETE /api/contacts/[id] - Soft delete a contact (with tenant check)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const tenantId = await getTenantId(request);
+
+    // Fetch contact first to verify ownership
+    const existingContact = await prisma.contact.findUnique({
+      where: { id, deletedAt: null },
+      select: { tenantId: true },
+    });
+
+    if (!existingContact) {
+      return NextResponse.json(
+        { error: "Contact not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check tenant ownership
+    await checkOwnership(existingContact.tenantId, request);
 
     // Soft delete
     await prisma.contact.update({
@@ -105,10 +137,6 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting contact:", error);
-    return NextResponse.json(
-      { error: "Failed to delete contact" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
