@@ -495,3 +495,111 @@ model FormSubmission {
   @@index([submittedAt(sort: Desc)])
   @@index([isSpam])
 }
+
+// ============================================
+// KNOWLEDGE BASE - Service Hub
+// ============================================
+
+model KBCategory {
+  id            String    @id @default(uuid())
+  tenantId      String
+
+  // Content
+  name          String
+  slug          String
+  description   String?   @db.Text
+  icon          String?
+
+  // Hierarchy
+  parentId      String?
+  parent        KBCategory?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children      KBCategory[] @relation("CategoryTree")
+
+  // Display
+  orderIndex    Int       @default(0)
+  isVisible     Boolean   @default(true)
+
+  // Audit
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  articles      KBArticle[]
+
+  @@unique([tenantId, parentId, slug])
+  @@index([tenantId])
+  @@index([parentId])
+  @@index([tenantId, isVisible, deletedAt])
+  @@index([orderIndex])
+}
+
+model KBArticle {
+  id              String    @id @default(uuid())
+  tenantId        String
+
+  // Content
+  title           String
+  slug            String
+  subtitle        String?
+  excerpt         String?   @db.Text
+  contentJson     Json?
+  contentHtml     String?   @db.Text
+
+  // Categorization
+  categoryId      String?
+  tags            String[]  @default([])
+
+  // Status & Workflow
+  status          String    @default("draft") // draft, published, archived
+  publishedAt     DateTime?
+
+  // SEO Metadata
+  metaTitle       String?
+  metaDescription String?   @db.Text
+
+  // Analytics
+  viewCount       Int       @default(0)
+  helpfulCount    Int       @default(0)
+  notHelpfulCount Int       @default(0)
+
+  // Audit
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  // Relations
+  category        KBCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  feedback        KBArticleFeedback[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, categoryId])
+  @@index([tenantId, status, deletedAt])
+  @@index([slug])
+  @@index([publishedAt(sort: Desc)])
+  @@index([viewCount(sort: Desc)])
+}
+
+model KBArticleFeedback {
+  id          String    @id @default(uuid())
+  articleId   String
+  tenantId    String
+
+  isHelpful   Boolean
+  comment     String?   @db.Text
+
+  visitorId   String?
+  ipAddress   String?
+
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  article     KBArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+  @@index([tenantId])
+  @@index([articleId, isHelpful])
+  @@unique([articleId, visitorId])
+}
