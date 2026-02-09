@@ -3,7 +3,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 
 const pool = new pg.Pool({
-  connectionString: "postgresql://postgres:123456@localhost:5432/hubspot_clone?schema=public",
+  connectionString: process.env.DATABASE_URL || "postgresql://postgres:123456@localhost:5432/hubspot_clone?schema=public",
 });
 
 const adapter = new PrismaPg(pool);
