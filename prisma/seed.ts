@@ -12,11 +12,12 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log("🌱 Seeding database...");
 
-  // Create tenant
+  // Create tenant with fixed ID matching API routes
   const tenant = await prisma.tenant.upsert({
     where: { domain: "demo.f-core.com" },
-    update: {},
+    update: { id: "demo-tenant" },
     create: {
+      id: "demo-tenant",
       name: "F-CORE Demo",
       domain: "demo.f-core.com",
       plan: "professional",

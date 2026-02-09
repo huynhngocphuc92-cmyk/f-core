@@ -25,8 +25,6 @@ export async function GET(request: NextRequest) {
           owner: { select: { id: true, name: true, email: true } },
           stage: { select: { id: true, name: true, color: true, probability: true } },
           pipeline: { select: { id: true, name: true } },
-          contacts: { include: { contact: { select: { id: true, firstName: true, lastName: true, email: true } } } },
-          companies: { include: { company: { select: { id: true, name: true } } } },
         },
         orderBy: { createdAt: "desc" },
         skip,
@@ -41,7 +39,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching deals:", error);
-    return NextResponse.json({ error: "Failed to fetch deals" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch deals", detail: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }
 

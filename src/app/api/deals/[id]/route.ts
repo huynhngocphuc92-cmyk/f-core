@@ -15,8 +15,6 @@ export async function GET(
         owner: { select: { id: true, name: true, email: true } },
         stage: true,
         pipeline: { include: { stages: { orderBy: { orderIndex: "asc" } } } },
-        contacts: { include: { contact: true } },
-        companies: { include: { company: true } },
         activities: { orderBy: { createdAt: "desc" }, take: 20 },
       },
     });
