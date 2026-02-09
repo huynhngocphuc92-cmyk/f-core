@@ -104,6 +104,7 @@ model Contact {
   companies       ContactCompany[]
   deals           DealContact[]
   activities      Activity[]
+  formSubmissions FormSubmission[]
 
   @@index([tenantId])
   @@index([email])
@@ -406,4 +407,274 @@ model PropertyDefinition {
 
   @@unique([tenantId, objectType, name])
   @@index([tenantId, objectType])
+}
+
+// ============================================
+// FORM BUILDER (Marketing Hub)
+// ============================================
+
+model Form {
+  id            String    @id @default(uuid())
+  tenantId      String
+
+  name          String
+  slug          String
+  description   String?
+
+  status        String    @default("draft") // draft, published, archived
+  settings      Json      @default("{}") // notifyEmails, autoResponder, captcha, honeypot, redirectUrl, thankYouMessage
+  theme         Json      @default("{}") // submitButtonText, submitButtonColor, backgroundColor, fontFamily, customCss
+
+  viewCount     Int       @default(0)
+
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  fields        FormField[]
+  submissions   FormSubmission[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([status])
+  @@index([deletedAt])
+}
+
+model FormField {
+  id              String    @id @default(uuid())
+  formId          String
+
+  name            String    // internal field name
+  label           String
+  type            String    // text, email, phone, number, url, textarea, dropdown, multi_select, radio, checkbox, date, file, hidden, heading, paragraph, divider, spacer
+  placeholder     String?
+  helpText        String?
+  defaultValue    String?
+
+  required        Boolean   @default(false)
+  hidden          Boolean   @default(false)
+  width           String    @default("full") // full, half, third
+
+  orderIndex      Int       @default(0)
+
+  options         Json?     // [{value, label}] for select/radio/checkbox
+  validationRules Json?     // {minLength, maxLength, pattern, min, max}
+  conditionalLogic Json?    // {conditions: [{field, operator, value}], logicType: "all"|"any", action: "show"|"hide"|"require"}
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  form            Form      @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId])
+  @@index([orderIndex])
+}
+
+model FormSubmission {
+  id              String    @id @default(uuid())
+  formId          String
+  tenantId        String
+
+  data            Json      // {fieldName: value}
+  metadata        Json      @default("{}") // {ip, userAgent, referrer, utmSource, utmMedium, utmCampaign}
+
+  contactId       String?   // Auto-created or linked contact
+  isSpam          Boolean   @default(false)
+
+  submittedAt     DateTime  @default(now())
+
+  // Relations
+  form            Form      @relation(fields: [formId], references: [id], onDelete: Cascade)
+  contact         Contact?  @relation(fields: [contactId], references: [id])
+
+  @@index([formId])
+  @@index([tenantId])
+  @@index([submittedAt(sort: Desc)])
+  @@index([isSpam])
+}
+
+// ============================================
+// KNOWLEDGE BASE - Service Hub
+// ============================================
+
+model KBCategory {
+  id            String    @id @default(uuid())
+  tenantId      String
+
+  // Content
+  name          String
+  slug          String
+  description   String?   @db.Text
+  icon          String?
+
+  // Hierarchy
+  parentId      String?
+  parent        KBCategory?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children      KBCategory[] @relation("CategoryTree")
+
+  // Display
+  orderIndex    Int       @default(0)
+  isVisible     Boolean   @default(true)
+
+  // Audit
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  articles      KBArticle[]
+
+  @@unique([tenantId, parentId, slug])
+  @@index([tenantId])
+  @@index([parentId])
+  @@index([tenantId, isVisible, deletedAt])
+  @@index([orderIndex])
+}
+
+model KBArticle {
+  id              String    @id @default(uuid())
+  tenantId        String
+
+  // Content
+  title           String
+  slug            String
+  subtitle        String?
+  excerpt         String?   @db.Text
+  contentJson     Json?
+  contentHtml     String?   @db.Text
+
+  // Categorization
+  categoryId      String?
+  tags            String[]  @default([])
+
+  // Status & Workflow
+  status          String    @default("draft") // draft, published, archived
+  publishedAt     DateTime?
+
+  // SEO Metadata
+  metaTitle       String?
+  metaDescription String?   @db.Text
+
+  // Analytics
+  viewCount       Int       @default(0)
+  helpfulCount    Int       @default(0)
+  notHelpfulCount Int       @default(0)
+
+  // Audit
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  // Relations
+  category        KBCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  feedback        KBArticleFeedback[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, categoryId])
+  @@index([tenantId, status, deletedAt])
+  @@index([slug])
+  @@index([publishedAt(sort: Desc)])
+  @@index([viewCount(sort: Desc)])
+}
+
+model KBArticleFeedback {
+  id          String    @id @default(uuid())
+  articleId   String
+  tenantId    String
+
+  isHelpful   Boolean
+  comment     String?   @db.Text
+
+  visitorId   String?
+  ipAddress   String?
+
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  article     KBArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+  @@index([tenantId])
+  @@index([articleId, isHelpful])
+  @@unique([articleId, visitorId])
+}
+
+// ============================================
+// CUSTOM REPORTS & DASHBOARDS
+// ============================================
+
+model Report {
+  id            String    @id @default(uuid())
+  tenantId      String
+
+  name          String
+  description   String?   @db.Text
+  category      String    @default("custom") // sales, marketing, service, custom
+
+  // Report definition stored as JSON
+  definition    Json      // { dataSource, metrics, dimensions, filters, chart, dateRange }
+
+  isFavorite    Boolean   @default(false)
+  runCount      Int       @default(0)
+  lastRunAt     DateTime?
+
+  // Audit
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  widgets       DashboardWidget[]
+
+  @@index([tenantId])
+  @@index([tenantId, category])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, isFavorite])
+}
+
+model Dashboard {
+  id            String    @id @default(uuid())
+  tenantId      String
+
+  name          String
+  description   String?   @db.Text
+  isDefault     Boolean   @default(false)
+
+  // Audit
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  widgets       DashboardWidget[]
+
+  @@index([tenantId])
+  @@index([tenantId, deletedAt])
+}
+
+model DashboardWidget {
+  id            String    @id @default(uuid())
+  dashboardId   String
+  reportId      String
+
+  title         String
+  x             Int       @default(0)
+  y             Int       @default(0)
+  w             Int       @default(6)
+  h             Int       @default(4)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  dashboard     Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  report        Report    @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([dashboardId])
+  @@index([reportId])
 }
