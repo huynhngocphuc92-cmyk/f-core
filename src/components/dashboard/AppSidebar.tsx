@@ -11,6 +11,7 @@ import {
   CalendarCheck,
   BarChart3,
   FileText,
+  BookOpen,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -27,6 +28,7 @@ const navigation = [
   { name: "Deals", href: "/deals", icon: CircleDollarSign },
   { name: "Tasks", href: "/tasks", icon: CalendarCheck },
   { name: "Forms", href: "/forms", icon: FileText },
+  { name: "Knowledge Base", href: "/knowledge-base", icon: BookOpen },
   { name: "Reports", href: "/reports", icon: BarChart3 },
 ];
 
