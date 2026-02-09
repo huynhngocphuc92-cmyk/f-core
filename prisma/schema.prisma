@@ -603,3 +603,78 @@ model KBArticleFeedback {
   @@index([articleId, isHelpful])
   @@unique([articleId, visitorId])
 }
+
+// ============================================
+// CUSTOM REPORTS & DASHBOARDS
+// ============================================
+
+model Report {
+  id            String    @id @default(uuid())
+  tenantId      String
+
+  name          String
+  description   String?   @db.Text
+  category      String    @default("custom") // sales, marketing, service, custom
+
+  // Report definition stored as JSON
+  definition    Json      // { dataSource, metrics, dimensions, filters, chart, dateRange }
+
+  isFavorite    Boolean   @default(false)
+  runCount      Int       @default(0)
+  lastRunAt     DateTime?
+
+  // Audit
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  widgets       DashboardWidget[]
+
+  @@index([tenantId])
+  @@index([tenantId, category])
+  @@index([tenantId, deletedAt])
+  @@index([tenantId, isFavorite])
+}
+
+model Dashboard {
+  id            String    @id @default(uuid())
+  tenantId      String
+
+  name          String
+  description   String?   @db.Text
+  isDefault     Boolean   @default(false)
+
+  // Audit
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  widgets       DashboardWidget[]
+
+  @@index([tenantId])
+  @@index([tenantId, deletedAt])
+}
+
+model DashboardWidget {
+  id            String    @id @default(uuid())
+  dashboardId   String
+  reportId      String
+
+  title         String
+  x             Int       @default(0)
+  y             Int       @default(0)
+  w             Int       @default(6)
+  h             Int       @default(4)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  dashboard     Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  report        Report    @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([dashboardId])
+  @@index([reportId])
+}

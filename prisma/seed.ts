@@ -644,6 +644,240 @@ async function main() {
 
   console.log("✅ Created 9 KB feedback entries on published articles");
 
+  // ============================================
+  // Custom Reports & Dashboards
+  // ============================================
+
+  const report1 = await prisma.report.upsert({
+    where: { id: "report-deals-by-stage" },
+    update: {},
+    create: {
+      id: "report-deals-by-stage",
+      tenantId: tenant.id,
+      name: "Deals by Stage",
+      description: "Shows the number of deals in each pipeline stage",
+      category: "sales",
+      isFavorite: true,
+      runCount: 24,
+      lastRunAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      definition: {
+        dataSource: "deals",
+        metrics: [{ field: "*", aggregate: "count", label: "Deal Count" }],
+        dimensions: [{ field: "closedReason", type: "categorical", label: "Stage" }],
+        filters: [],
+        chart: { chartType: "bar", showLegend: false, showGrid: true },
+      },
+    },
+  });
+
+  const report2 = await prisma.report.upsert({
+    where: { id: "report-revenue-over-time" },
+    update: {},
+    create: {
+      id: "report-revenue-over-time",
+      tenantId: tenant.id,
+      name: "Revenue Over Time",
+      description: "Monthly revenue trend from closed deals",
+      category: "sales",
+      isFavorite: true,
+      runCount: 18,
+      lastRunAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
+      definition: {
+        dataSource: "deals",
+        metrics: [{ field: "amount", aggregate: "sum", label: "Revenue" }],
+        dimensions: [{ field: "createdAt", type: "temporal", granularity: "month", label: "Month" }],
+        filters: [],
+        chart: { chartType: "area", showLegend: false, showGrid: true },
+        dateRange: { type: "preset", preset: "thisYear", dateField: "createdAt" },
+      },
+    },
+  });
+
+  const report3 = await prisma.report.upsert({
+    where: { id: "report-contacts-lifecycle" },
+    update: {},
+    create: {
+      id: "report-contacts-lifecycle",
+      tenantId: tenant.id,
+      name: "Contacts by Lifecycle Stage",
+      description: "Distribution of contacts across lifecycle stages",
+      category: "marketing",
+      isFavorite: false,
+      runCount: 12,
+      lastRunAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      definition: {
+        dataSource: "contacts",
+        metrics: [{ field: "*", aggregate: "count", label: "Count" }],
+        dimensions: [{ field: "lifecycleStage", type: "categorical", label: "Lifecycle Stage" }],
+        filters: [],
+        chart: { chartType: "pie", showLegend: true },
+      },
+    },
+  });
+
+  const report4 = await prisma.report.upsert({
+    where: { id: "report-activities-by-type" },
+    update: {},
+    create: {
+      id: "report-activities-by-type",
+      tenantId: tenant.id,
+      name: "Activities by Type",
+      description: "Breakdown of activity types (calls, emails, meetings, etc.)",
+      category: "sales",
+      runCount: 8,
+      definition: {
+        dataSource: "activities",
+        metrics: [{ field: "*", aggregate: "count", label: "Activity Count" }],
+        dimensions: [{ field: "type", type: "categorical", label: "Type" }],
+        filters: [],
+        chart: { chartType: "bar", showLegend: false, showGrid: true },
+      },
+    },
+  });
+
+  const report5 = await prisma.report.upsert({
+    where: { id: "report-companies-by-industry" },
+    update: {},
+    create: {
+      id: "report-companies-by-industry",
+      tenantId: tenant.id,
+      name: "Companies by Industry",
+      description: "Distribution of companies across industries",
+      category: "marketing",
+      runCount: 5,
+      definition: {
+        dataSource: "companies",
+        metrics: [{ field: "*", aggregate: "count", label: "Count" }],
+        dimensions: [{ field: "industry", type: "categorical", label: "Industry" }],
+        filters: [],
+        chart: { chartType: "pie", showLegend: true },
+      },
+    },
+  });
+
+  const report6 = await prisma.report.upsert({
+    where: { id: "report-total-deal-value" },
+    update: {},
+    create: {
+      id: "report-total-deal-value",
+      tenantId: tenant.id,
+      name: "Total Pipeline Value",
+      description: "Sum of all active deal amounts",
+      category: "sales",
+      isFavorite: true,
+      runCount: 30,
+      lastRunAt: new Date(),
+      definition: {
+        dataSource: "deals",
+        metrics: [{ field: "amount", aggregate: "sum", label: "Total Value" }],
+        dimensions: [],
+        filters: [],
+        chart: { chartType: "number" },
+      },
+    },
+  });
+
+  console.log("✅ Created 6 reports");
+
+  // Dashboards
+  const dashboard1 = await prisma.dashboard.upsert({
+    where: { id: "dashboard-sales-overview" },
+    update: {},
+    create: {
+      id: "dashboard-sales-overview",
+      tenantId: tenant.id,
+      name: "Sales Overview",
+      description: "Key sales metrics and deal pipeline insights",
+      isDefault: true,
+    },
+  });
+
+  // Add widgets to Sales Overview dashboard
+  await prisma.dashboardWidget.upsert({
+    where: { id: "widget-1" },
+    update: {},
+    create: {
+      id: "widget-1",
+      dashboardId: dashboard1.id,
+      reportId: report6.id,
+      title: "Total Pipeline Value",
+      x: 0, y: 0, w: 4, h: 3,
+    },
+  });
+
+  await prisma.dashboardWidget.upsert({
+    where: { id: "widget-2" },
+    update: {},
+    create: {
+      id: "widget-2",
+      dashboardId: dashboard1.id,
+      reportId: report1.id,
+      title: "Deals by Stage",
+      x: 4, y: 0, w: 8, h: 4,
+    },
+  });
+
+  await prisma.dashboardWidget.upsert({
+    where: { id: "widget-3" },
+    update: {},
+    create: {
+      id: "widget-3",
+      dashboardId: dashboard1.id,
+      reportId: report2.id,
+      title: "Revenue Trend",
+      x: 0, y: 4, w: 6, h: 4,
+    },
+  });
+
+  await prisma.dashboardWidget.upsert({
+    where: { id: "widget-4" },
+    update: {},
+    create: {
+      id: "widget-4",
+      dashboardId: dashboard1.id,
+      reportId: report4.id,
+      title: "Activity Breakdown",
+      x: 6, y: 4, w: 6, h: 4,
+    },
+  });
+
+  const dashboard2 = await prisma.dashboard.upsert({
+    where: { id: "dashboard-marketing" },
+    update: {},
+    create: {
+      id: "dashboard-marketing",
+      tenantId: tenant.id,
+      name: "Marketing Dashboard",
+      description: "Contact and company analytics",
+    },
+  });
+
+  await prisma.dashboardWidget.upsert({
+    where: { id: "widget-5" },
+    update: {},
+    create: {
+      id: "widget-5",
+      dashboardId: dashboard2.id,
+      reportId: report3.id,
+      title: "Contacts by Lifecycle",
+      x: 0, y: 0, w: 6, h: 4,
+    },
+  });
+
+  await prisma.dashboardWidget.upsert({
+    where: { id: "widget-6" },
+    update: {},
+    create: {
+      id: "widget-6",
+      dashboardId: dashboard2.id,
+      reportId: report5.id,
+      title: "Companies by Industry",
+      x: 6, y: 0, w: 6, h: 4,
+    },
+  });
+
+  console.log("✅ Created 2 dashboards with 6 widgets");
+
   console.log("🎉 Seeding completed!");
 }
 
