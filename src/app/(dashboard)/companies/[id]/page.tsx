@@ -11,7 +11,6 @@ import {
   Briefcase,
   Clock,
   Edit,
-  Trash2,
   Plus,
   Mail,
   FileText,
@@ -20,6 +19,7 @@ import {
   CircleDollarSign,
   ExternalLink,
 } from "lucide-react";
+import DeleteButton from "@/components/crm/DeleteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -494,14 +494,14 @@ export default async function CompanyDetailPage({
               Actions
             </h3>
             <div className="space-y-2">
-              <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              <Link
+                href={`/companies/${company.id}/edit`}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
                 <Edit className="w-4 h-4" />
                 Edit
-              </button>
-              <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 bg-white border border-gray-200 rounded-lg hover:bg-red-50 transition-colors">
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </button>
+              </Link>
+              <DeleteButton id={company.id} entityType="company" entityName={company.name} />
               <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-white bg-[#0891b2] rounded-lg hover:bg-[#0e7490] transition-colors">
                 <Plus className="w-4 h-4" />
                 Create activity
