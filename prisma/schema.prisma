@@ -35,6 +35,8 @@ model User {
   meetingTypes   MeetingType[]
   meetingLinks   MeetingLink[]
   availability   UserAvailability[]
+  assignedTickets Ticket[] @relation("TicketAssignee")
+  createdTickets  Ticket[] @relation("TicketCreator")
 
   @@index([tenantId])
   @@index([email])
@@ -59,6 +61,7 @@ model Tenant {
   emailTemplates EmailTemplate[]
   meetingTypes   MeetingType[]
   meetingLinks   MeetingLink[]
+  tickets        Ticket[]
 }
 
 // ============================================
@@ -112,6 +115,7 @@ model Contact {
   deals           DealContact[]
   activities      Activity[]
   formSubmissions FormSubmission[]
+  tickets         Ticket[]
 
   @@index([tenantId])
   @@index([email])
@@ -168,6 +172,7 @@ model Company {
   contacts        ContactCompany[]
   deals           DealCompany[]
   activities      Activity[]
+  tickets         Ticket[]
 
   @@index([tenantId])
   @@index([domain])
@@ -790,4 +795,59 @@ model UserAvailability {
 
   @@unique([userId, dayOfWeek])
   @@index([userId])
+}
+
+// ============================================
+// TICKETING SYSTEM
+// ============================================
+
+model Ticket {
+  id            String    @id @default(uuid())
+  tenantId      String
+  ticketNumber  Int       @default(autoincrement())
+
+  // Content
+  subject       String
+  description   String?   @db.Text
+  category      String?   // bug, feature, question, support
+
+  // Status & Priority
+  status        String    @default("open") // open, in_progress, waiting, resolved, closed
+  priority      String    @default("medium") // low, medium, high, urgent
+
+  // Assignments
+  assigneeId    String?
+  createdById   String?
+  contactId     String?
+  companyId     String?
+
+  // SLA
+  dueDate       DateTime?
+  resolvedAt    DateTime?
+  closedAt      DateTime?
+  firstResponseAt DateTime?
+
+  // Metadata
+  tags          Json?     // string array
+  source        String?   // email, phone, web, chat
+
+  // Audit
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  assignee      User?     @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  createdBy     User?     @relation("TicketCreator", fields: [createdById], references: [id])
+  contact       Contact?  @relation(fields: [contactId], references: [id])
+  company       Company?  @relation(fields: [companyId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, priority])
+  @@index([assigneeId])
+  @@index([contactId])
+  @@index([companyId])
+  @@index([deletedAt])
 }
