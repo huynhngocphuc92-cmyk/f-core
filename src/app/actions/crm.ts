@@ -253,3 +253,66 @@ export async function deleteDeal(id: string) {
   revalidatePath("/deals");
   redirect("/deals");
 }
+
+// ============================================
+// CREATE ACTIVITY
+// ============================================
+
+export async function createActivity(formData: FormData) {
+  const tenantId = await getTenantId();
+
+  const type = formData.get("type") as string;
+  const subject = formData.get("subject") as string;
+
+  if (!type || !subject) {
+    return { error: "Activity type and subject are required" };
+  }
+
+  const contactId = (formData.get("contactId") as string) || null;
+  const companyId = (formData.get("companyId") as string) || null;
+  const dealId = (formData.get("dealId") as string) || null;
+
+  const callDurationStr = formData.get("callDuration") as string;
+  const meetingStartStr = formData.get("meetingStart") as string;
+  const meetingEndStr = formData.get("meetingEnd") as string;
+  const dueDateStr = formData.get("dueDate") as string;
+
+  await prisma.activity.create({
+    data: {
+      tenantId,
+      type,
+      subject,
+      body: (formData.get("body") as string) || null,
+      contactId,
+      companyId,
+      dealId,
+      // Call fields
+      callDuration: type === "call" && callDurationStr ? parseInt(callDurationStr) : null,
+      callOutcome: type === "call" ? (formData.get("callOutcome") as string) || null : null,
+      callDirection: type === "call" ? (formData.get("callDirection") as string) || null : null,
+      // Meeting fields
+      meetingStart: type === "meeting" && meetingStartStr ? new Date(meetingStartStr) : null,
+      meetingEnd: type === "meeting" && meetingEndStr ? new Date(meetingEndStr) : null,
+      meetingLocation: type === "meeting" ? (formData.get("meetingLocation") as string) || null : null,
+      // Task fields
+      dueDate: type === "task" && dueDateStr ? new Date(dueDateStr) : null,
+      priority: type === "task" ? (formData.get("priority") as string) || null : null,
+      status: type === "task" ? "pending" : null,
+      // Email fields
+      emailTo: type === "email" ? (formData.get("emailTo") as string) || null : null,
+      emailCc: type === "email" ? (formData.get("emailCc") as string) || null : null,
+    },
+  });
+
+  if (contactId) {
+    revalidatePath(`/contacts/${contactId}`);
+  }
+  if (companyId) {
+    revalidatePath(`/companies/${companyId}`);
+  }
+  if (dealId) {
+    revalidatePath(`/deals/${dealId}`);
+  }
+
+  return { success: true };
+}
