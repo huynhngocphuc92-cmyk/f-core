@@ -10,6 +10,7 @@ import {
   Building2,
 } from "lucide-react";
 import { getTickets, getTicketStats } from "@/app/actions/tickets";
+import { FilterSelect } from "@/components/crm/FilterSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -121,37 +122,29 @@ export default async function TicketsPage({
             className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2]"
           />
         </div>
-        <select
+        <FilterSelect
           name="status"
           defaultValue={params.status || "all"}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2]"
-          onChange={(e) => {
-            const form = e.target.form;
-            if (form) form.requestSubmit();
-          }}
-        >
-          <option value="all">All Statuses</option>
-          <option value="open">Open</option>
-          <option value="in_progress">In Progress</option>
-          <option value="waiting">Waiting</option>
-          <option value="resolved">Resolved</option>
-          <option value="closed">Closed</option>
-        </select>
-        <select
+          options={[
+            { value: "all", label: "All Statuses" },
+            { value: "open", label: "Open" },
+            { value: "in_progress", label: "In Progress" },
+            { value: "waiting", label: "Waiting" },
+            { value: "resolved", label: "Resolved" },
+            { value: "closed", label: "Closed" },
+          ]}
+        />
+        <FilterSelect
           name="priority"
           defaultValue={params.priority || "all"}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2]"
-          onChange={(e) => {
-            const form = e.target.form;
-            if (form) form.requestSubmit();
-          }}
-        >
-          <option value="all">All Priorities</option>
-          <option value="urgent">Urgent</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
+          options={[
+            { value: "all", label: "All Priorities" },
+            { value: "urgent", label: "Urgent" },
+            { value: "high", label: "High" },
+            { value: "medium", label: "Medium" },
+            { value: "low", label: "Low" },
+          ]}
+        />
       </form>
 
       {/* Tickets Table */}

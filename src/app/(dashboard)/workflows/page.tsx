@@ -9,6 +9,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { getWorkflows, getWorkflowStats } from "@/app/actions/workflows";
+import { FilterSelect } from "@/components/crm/FilterSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -110,20 +111,16 @@ export default async function WorkflowsPage({
             className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2]"
           />
         </div>
-        <select
+        <FilterSelect
           name="status"
           defaultValue={params.status || "all"}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2]"
-          onChange={(e) => {
-            const form = e.target.form;
-            if (form) form.requestSubmit();
-          }}
-        >
-          <option value="all">All Statuses</option>
-          <option value="draft">Draft</option>
-          <option value="active">Active</option>
-          <option value="paused">Paused</option>
-        </select>
+          options={[
+            { value: "all", label: "All Statuses" },
+            { value: "draft", label: "Draft" },
+            { value: "active", label: "Active" },
+            { value: "paused", label: "Paused" },
+          ]}
+        />
       </form>
 
       {/* Workflows List */}

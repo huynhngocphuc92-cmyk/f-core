@@ -10,6 +10,7 @@ import {
   MousePointerClick,
 } from "lucide-react";
 import { getCampaigns, getCampaignStats } from "@/app/actions/campaigns";
+import { FilterSelect } from "@/components/crm/FilterSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -111,20 +112,16 @@ export default async function EmailMarketingPage({
             className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2]"
           />
         </div>
-        <select
+        <FilterSelect
           name="status"
           defaultValue={params.status || "all"}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2]"
-          onChange={(e) => {
-            const form = e.target.form;
-            if (form) form.requestSubmit();
-          }}
-        >
-          <option value="all">All Statuses</option>
-          <option value="draft">Drafts</option>
-          <option value="sent">Sent</option>
-          <option value="scheduled">Scheduled</option>
-        </select>
+          options={[
+            { value: "all", label: "All Statuses" },
+            { value: "draft", label: "Drafts" },
+            { value: "sent", label: "Sent" },
+            { value: "scheduled", label: "Scheduled" },
+          ]}
+        />
       </form>
 
       {/* Campaigns List */}

@@ -48,6 +48,9 @@ next-env.d.ts
 # Agent files
 .agents/
 .claude/
+.beads/
+.graph-cache/
+code-graph.json
 
 # Images
 *.png
