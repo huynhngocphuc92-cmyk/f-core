@@ -89,7 +89,7 @@ export default async function ContactDetailPage({
 }) {
   const { id } = await params;
 
-  const contact = await prisma.contact.findUnique({
+  const contact = await prisma.contact.findFirst({
     where: { id, deletedAt: null },
     include: {
       owner: {
