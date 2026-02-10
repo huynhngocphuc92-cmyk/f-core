@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   User,
   Bell,
@@ -7,6 +8,8 @@ import {
   Key,
   Mail,
   Building2,
+  SlidersHorizontal,
+  ChevronRight,
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -221,6 +224,30 @@ export default function SettingsPage() {
                 <option>EUR (€)</option>
               </select>
             </div>
+          </div>
+        </div>
+
+        {/* Data Management Section */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <SlidersHorizontal className="w-5 h-5 text-[#0891b2]" />
+            <h2 className="text-lg font-semibold text-gray-900">
+              Data Management
+            </h2>
+          </div>
+          <div className="space-y-1">
+            <Link
+              href="/settings/properties"
+              className="flex items-center justify-between py-3 px-3 rounded-lg hover:bg-gray-50 transition-colors group"
+            >
+              <div>
+                <p className="text-sm font-medium text-gray-900">Properties</p>
+                <p className="text-xs text-gray-500">
+                  Manage custom fields for contacts, companies, and deals
+                </p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-[#0891b2] transition-colors" />
+            </Link>
           </div>
         </div>
 

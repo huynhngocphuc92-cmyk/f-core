@@ -20,6 +20,7 @@ import {
 import DeleteButton from "@/components/crm/DeleteButton";
 import ActivityForm from "@/components/crm/ActivityForm";
 import AssociationPicker, { RemoveAssociationButton } from "@/components/crm/AssociationPicker";
+import CustomProperties from "@/components/crm/CustomProperties";
 import {
   searchContacts,
   searchCompanies,
@@ -28,6 +29,7 @@ import {
   addCompanyToDeal,
   removeCompanyFromDeal,
 } from "@/app/actions/crm";
+import { getPropertyDefinitions } from "@/app/actions/properties";
 
 export const dynamic = "force-dynamic";
 
@@ -188,6 +190,10 @@ export default async function DealDetailPage({
   if (!deal) {
     notFound();
   }
+
+  const customPropertyDefs = (await getPropertyDefinitions("deal")).filter(
+    (p) => !p.isSystem
+  );
 
   const priority = getPriorityStyles(deal.priority);
   const currentStageIndex = allStages.findIndex((s) => s.id === deal.stageId);
@@ -672,6 +678,13 @@ export default async function DealDetailPage({
               <ActivityForm dealId={deal.id} />
             </div>
           </div>
+
+          <CustomProperties
+            entityType="deal"
+            entityId={deal.id}
+            properties={(deal.properties as Record<string, string>) || {}}
+            propertyDefs={customPropertyDefs}
+          />
         </div>
       </div>
     </div>

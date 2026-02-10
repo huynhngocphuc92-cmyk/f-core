@@ -17,11 +17,13 @@ import {
 import DeleteButton from "@/components/crm/DeleteButton";
 import ActivityForm from "@/components/crm/ActivityForm";
 import AssociationPicker, { RemoveAssociationButton } from "@/components/crm/AssociationPicker";
+import CustomProperties from "@/components/crm/CustomProperties";
 import {
   searchCompanies,
   addContactToCompany,
   removeContactFromCompany,
 } from "@/app/actions/crm";
+import { getPropertyDefinitions } from "@/app/actions/properties";
 
 export const dynamic = "force-dynamic";
 
@@ -130,6 +132,10 @@ export default async function ContactDetailPage({
   if (!contact) {
     notFound();
   }
+
+  const customPropertyDefs = (await getPropertyDefinitions("contact")).filter(
+    (p) => !p.isSystem
+  );
 
   const fullName =
     [contact.firstName, contact.lastName].filter(Boolean).join(" ") ||
@@ -460,6 +466,13 @@ export default async function ContactDetailPage({
               <ActivityForm contactId={contact.id} />
             </div>
           </div>
+
+          <CustomProperties
+            entityType="contact"
+            entityId={contact.id}
+            properties={(contact.properties as Record<string, string>) || {}}
+            propertyDefs={customPropertyDefs}
+          />
         </div>
       </div>
     </div>
