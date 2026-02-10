@@ -6,8 +6,8 @@ import prisma from './prisma';
 /**
  * Create a Supabase server client for API routes
  */
-export function createSupabaseServerClient() {
-  const cookieStore = cookies();
+export async function createSupabaseServerClient() {
+  const cookieStore = await cookies();
   
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,7 +27,7 @@ export function createSupabaseServerClient() {
  * @throws Error if user is not authenticated
  */
 export async function getCurrentUser(request?: NextRequest) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   
   const { data: { user }, error } = await supabase.auth.getUser();
   
