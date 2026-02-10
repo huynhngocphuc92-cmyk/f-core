@@ -239,10 +239,13 @@ export default function DealsBoard({ deals }: { deals: Deal[] }) {
             </button>
           </div>
 
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#0891b2] text-white rounded-lg hover:bg-[#0ea5e9] transition-colors text-sm font-medium">
+          <Link
+            href="/deals/new"
+            className="flex items-center gap-2 px-4 py-2 bg-[#0891b2] text-white rounded-lg hover:bg-[#0ea5e9] transition-colors text-sm font-medium"
+          >
             <Plus className="w-4 h-4" />
             Create deal
-          </button>
+          </Link>
         </div>
       </div>
 
