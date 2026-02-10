@@ -32,6 +32,9 @@ model User {
   deals         Deal[]    @relation("DealOwner")
   activities    Activity[]
   emailTemplates EmailTemplate[]
+  meetingTypes   MeetingType[]
+  meetingLinks   MeetingLink[]
+  availability   UserAvailability[]
 
   @@index([tenantId])
   @@index([email])
@@ -54,6 +57,8 @@ model Tenant {
   activities    Activity[]
   pipelines     Pipeline[]
   emailTemplates EmailTemplate[]
+  meetingTypes   MeetingType[]
+  meetingLinks   MeetingLink[]
 }
 
 // ============================================
@@ -711,4 +716,78 @@ model EmailTemplate {
   @@index([tenantId])
   @@index([tenantId, isActive])
   @@index([deletedAt])
+}
+
+// ============================================
+// MEETING SCHEDULER
+// ============================================
+
+model MeetingType {
+  id            String    @id @default(uuid())
+  tenantId      String
+  name          String    // "15-min Quick Call", "30-min Demo"
+  slug          String    // URL-friendly name
+  duration      Int       // minutes
+  color         String    @default("#0891b2")
+  description   String?   @db.Text
+  location      String?   // "Zoom", "Google Meet", custom URL
+  isActive      Boolean   @default(true)
+  bufferBefore  Int       @default(0) // minutes buffer before meeting
+  bufferAfter   Int       @default(5) // minutes buffer after meeting
+
+  ownerId       String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  // Relations
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+  owner         User?     @relation(fields: [ownerId], references: [id])
+  meetingLinks  MeetingLink[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@index([deletedAt])
+}
+
+model MeetingLink {
+  id              String    @id @default(uuid())
+  tenantId        String
+  slug            String    @unique // public URL slug
+  userId          String
+  meetingTypeId   String
+  isActive        Boolean   @default(true)
+  customMessage   String?   @db.Text // welcome message on booking page
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  user            User      @relation(fields: [userId], references: [id])
+  meetingType     MeetingType @relation(fields: [meetingTypeId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([slug])
+}
+
+model UserAvailability {
+  id          String    @id @default(uuid())
+  userId      String
+  dayOfWeek   Int       // 0=Sunday, 1=Monday, ... 6=Saturday
+  startTime   String    // "09:00"
+  endTime     String    // "17:00"
+  isActive    Boolean   @default(true)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@unique([userId, dayOfWeek])
+  @@index([userId])
 }
