@@ -24,6 +24,11 @@ import {
   Bell,
   HelpCircle,
   Plus,
+  ListOrdered,
+  Receipt,
+  Layout,
+  MessageCircle,
+  Shield,
 } from "lucide-react";
 
 const navigation = [
@@ -36,6 +41,10 @@ const navigation = [
   { name: "Tickets", href: "/tickets", icon: Ticket },
   { name: "Marketing", href: "/email-marketing", icon: Mail },
   { name: "Workflows", href: "/workflows", icon: Zap },
+  { name: "Sequences", href: "/sequences", icon: ListOrdered },
+  { name: "Quotes", href: "/quotes", icon: Receipt },
+  { name: "Landing Pages", href: "/landing-pages", icon: Layout },
+  { name: "Chat", href: "/chat", icon: MessageCircle },
   { name: "Tasks", href: "/tasks", icon: CalendarCheck },
   { name: "Forms", href: "/forms", icon: FileText },
   { name: "Knowledge Base", href: "/knowledge-base", icon: BookOpen },

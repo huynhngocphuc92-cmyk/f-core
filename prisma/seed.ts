@@ -1348,6 +1348,557 @@ async function main() {
   }
   console.log("✅ Created user availability (Mon-Fri 9am-5pm)");
 
+  // ============================================
+  // SEQUENCES - Sales Automation
+  // ============================================
+
+  const sequenceData = [
+    {
+      id: "seq-1",
+      name: "New Lead Outreach",
+      description: "5-step outreach sequence for new inbound leads with email and task touchpoints.",
+      status: "active",
+      enrolledCount: 127,
+      completedCount: 89,
+      replyRate: 23.5,
+      steps: [
+        { type: "email", subject: "Nice to meet you!", body: "Hi {{firstName}}, thanks for your interest...", delay: 0 },
+        { type: "wait", days: 2 },
+        { type: "email", subject: "Quick follow-up", body: "Just checking in to see if you had any questions...", delay: 2 },
+        { type: "wait", days: 3 },
+        { type: "task", title: "Call {{firstName}}", description: "Make a follow-up call", delay: 5 },
+        { type: "wait", days: 2 },
+        { type: "email", subject: "Last chance to connect", body: "I wanted to reach out one more time...", delay: 7 },
+      ],
+    },
+    {
+      id: "seq-2",
+      name: "Demo Follow-up",
+      description: "Post-demo nurture sequence to move prospects toward closing.",
+      status: "active",
+      enrolledCount: 45,
+      completedCount: 32,
+      replyRate: 38.2,
+      steps: [
+        { type: "email", subject: "Great chatting today!", body: "Thanks for joining the demo...", delay: 0 },
+        { type: "wait", days: 1 },
+        { type: "task", title: "Send proposal to {{firstName}}", delay: 1 },
+        { type: "wait", days: 3 },
+        { type: "email", subject: "Your proposal is ready", body: "I've attached the proposal we discussed...", delay: 4 },
+      ],
+    },
+    {
+      id: "seq-3",
+      name: "Re-engagement Campaign",
+      description: "Win-back sequence for contacts who went cold after initial engagement.",
+      status: "paused",
+      enrolledCount: 200,
+      completedCount: 145,
+      replyRate: 12.1,
+      steps: [
+        { type: "email", subject: "We miss you!", body: "It's been a while since we connected...", delay: 0 },
+        { type: "wait", days: 5 },
+        { type: "email", subject: "New features you'll love", body: "Check out what we've been building...", delay: 5 },
+        { type: "wait", days: 7 },
+        { type: "email", subject: "Exclusive offer inside", body: "We'd love to have you back...", delay: 12 },
+      ],
+    },
+    {
+      id: "seq-4",
+      name: "Enterprise Outbound",
+      description: "Multi-touch outbound sequence targeting enterprise decision makers.",
+      status: "draft",
+      enrolledCount: 0,
+      completedCount: 0,
+      replyRate: 0,
+      steps: [
+        { type: "email", subject: "{{companyName}} + F-CORE", body: "I noticed {{companyName}} is growing...", delay: 0 },
+        { type: "wait", days: 3 },
+        { type: "task", title: "Connect on LinkedIn", delay: 3 },
+        { type: "wait", days: 4 },
+        { type: "email", subject: "Quick question about {{companyName}}", body: "I had a thought about how we could help...", delay: 7 },
+      ],
+    },
+  ];
+
+  for (const s of sequenceData) {
+    await prisma.sequence.upsert({
+      where: { id: s.id },
+      update: {},
+      create: {
+        id: s.id,
+        tenantId: tenant.id,
+        ownerId: user.id,
+        name: s.name,
+        description: s.description,
+        status: s.status,
+        steps: s.steps,
+        enrolledCount: s.enrolledCount,
+        completedCount: s.completedCount,
+        replyRate: s.replyRate,
+      },
+    });
+  }
+  console.log("✅ Created 4 sequences");
+
+  // ============================================
+  // QUOTES - Sales Hub
+  // ============================================
+
+  const quoteData = [
+    {
+      id: "quote-1",
+      title: "TechCorp Enterprise License",
+      status: "approved",
+      contactId: "contact-john@example.com",
+      companyId: "company-techcorp.com",
+      subtotal: 24000,
+      total: 24000,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      approvedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      sentAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      paymentTerms: "Net 30",
+      notes: "Annual enterprise license with premium support.",
+      lineItems: [
+        { name: "F-CORE Enterprise License", quantity: 10, unitPrice: 2000, discount: 0 },
+        { name: "Premium Support Package", quantity: 1, unitPrice: 4000, discount: 0 },
+      ],
+    },
+    {
+      id: "quote-2",
+      title: "StartupIO Starter Package",
+      status: "pending",
+      contactId: "contact-bob@startup.io",
+      companyId: "company-startup.io",
+      subtotal: 5400,
+      total: 5400,
+      expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      sentAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      paymentTerms: "Net 15",
+      lineItems: [
+        { name: "F-CORE Professional License", quantity: 3, unitPrice: 1500, discount: 0 },
+        { name: "Onboarding Session", quantity: 1, unitPrice: 900, discount: 0 },
+      ],
+    },
+    {
+      id: "quote-3",
+      title: "Agency Partner Deal",
+      status: "draft",
+      contactId: "contact-charlie@agency.co",
+      companyId: "company-agency.co",
+      subtotal: 15000,
+      total: 13500,
+      paymentTerms: "Net 45",
+      notes: "Agency partner pricing with 10% discount.",
+      lineItems: [
+        { name: "F-CORE Agency License", quantity: 5, unitPrice: 2500, discount: 10 },
+        { name: "White-label Add-on", quantity: 1, unitPrice: 2500, discount: 0 },
+      ],
+    },
+    {
+      id: "quote-4",
+      title: "Enterprise Consulting Engagement",
+      status: "expired",
+      contactId: "contact-alice@enterprise.com",
+      companyId: "company-enterprise.com",
+      subtotal: 50000,
+      total: 50000,
+      expiresAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      sentAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      paymentTerms: "Net 60",
+      lineItems: [
+        { name: "CRM Implementation", quantity: 1, unitPrice: 30000, discount: 0 },
+        { name: "Data Migration", quantity: 1, unitPrice: 10000, discount: 0 },
+        { name: "Training (per day)", quantity: 5, unitPrice: 2000, discount: 0 },
+      ],
+    },
+  ];
+
+  for (const q of quoteData) {
+    const { lineItems, ...quoteFields } = q;
+    await prisma.quote.upsert({
+      where: { id: q.id },
+      update: {},
+      create: {
+        id: quoteFields.id,
+        tenantId: tenant.id,
+        ownerId: user.id,
+        title: quoteFields.title,
+        status: quoteFields.status,
+        contactId: quoteFields.contactId,
+        companyId: quoteFields.companyId,
+        subtotal: quoteFields.subtotal,
+        discount: quoteFields.subtotal - quoteFields.total,
+        tax: 0,
+        total: quoteFields.total,
+        expiresAt: quoteFields.expiresAt || null,
+        sentAt: quoteFields.sentAt || null,
+        approvedAt: quoteFields.approvedAt || null,
+        paymentTerms: quoteFields.paymentTerms || null,
+        notes: quoteFields.notes || null,
+        lineItems: {
+          create: lineItems.map((li, idx) => ({
+            name: li.name,
+            quantity: li.quantity,
+            unitPrice: li.unitPrice,
+            discount: li.discount,
+            total: Math.round(li.quantity * li.unitPrice * (1 - li.discount / 100) * 100) / 100,
+            orderIndex: idx,
+          })),
+        },
+      },
+    });
+  }
+  console.log("✅ Created 4 quotes with line items");
+
+  // ============================================
+  // LANDING PAGES
+  // ============================================
+
+  const landingPageData = [
+    {
+      id: "lp-1",
+      name: "Product Launch Page",
+      slug: "product-launch",
+      status: "published",
+      metaTitle: "F-CORE 2.0 - The Future of CRM",
+      metaDescription: "Discover how F-CORE 2.0 can transform your sales process.",
+      viewCount: 3456,
+      conversionCount: 287,
+      contentHtml: "<h1>F-CORE 2.0 is Here</h1><p>Revolutionize your CRM experience...</p>",
+    },
+    {
+      id: "lp-2",
+      name: "Webinar Registration",
+      slug: "webinar-crm-best-practices",
+      status: "published",
+      metaTitle: "Free Webinar: CRM Best Practices",
+      metaDescription: "Join our expert-led webinar on CRM best practices.",
+      viewCount: 1823,
+      conversionCount: 412,
+      contentHtml: "<h1>Master Your Sales Pipeline</h1><p>Join our free webinar...</p>",
+    },
+    {
+      id: "lp-3",
+      name: "Free Trial Sign-up",
+      slug: "free-trial",
+      status: "published",
+      metaTitle: "Start Your Free Trial - F-CORE CRM",
+      metaDescription: "Try F-CORE free for 14 days. No credit card required.",
+      viewCount: 8921,
+      conversionCount: 1345,
+      contentHtml: "<h1>Try F-CORE Free</h1><p>14 days. No credit card required...</p>",
+    },
+    {
+      id: "lp-4",
+      name: "Case Study: TechCorp",
+      slug: "case-study-techcorp",
+      status: "draft",
+      metaTitle: "How TechCorp Grew 3x with F-CORE",
+      metaDescription: "Read how TechCorp transformed their sales process.",
+      viewCount: 0,
+      conversionCount: 0,
+      contentHtml: "<h1>TechCorp Success Story</h1><p>How they grew revenue 3x...</p>",
+    },
+    {
+      id: "lp-5",
+      name: "Pricing Page",
+      slug: "pricing",
+      status: "archived",
+      metaTitle: "F-CORE Pricing Plans",
+      metaDescription: "Simple, transparent pricing for teams of all sizes.",
+      viewCount: 5432,
+      conversionCount: 876,
+      contentHtml: "<h1>Simple Pricing</h1><p>Choose the plan that works for you...</p>",
+    },
+  ];
+
+  for (const lp of landingPageData) {
+    await prisma.landingPage.upsert({
+      where: { id: lp.id },
+      update: {},
+      create: {
+        id: lp.id,
+        tenantId: tenant.id,
+        ownerId: user.id,
+        name: lp.name,
+        slug: lp.slug,
+        status: lp.status,
+        metaTitle: lp.metaTitle,
+        metaDescription: lp.metaDescription,
+        viewCount: lp.viewCount,
+        conversionCount: lp.conversionCount,
+        contentHtml: lp.contentHtml,
+      },
+    });
+  }
+  console.log("✅ Created 5 landing pages");
+
+  // ============================================
+  // CHAT WIDGET & CONVERSATIONS
+  // ============================================
+
+  const chatWidget = await prisma.chatWidget.upsert({
+    where: { id: "widget-main" },
+    update: {},
+    create: {
+      id: "widget-main",
+      tenantId: tenant.id,
+      name: "Main Website Chat",
+      welcomeMessage: "Hi there! How can we help you today?",
+      color: "#0891b2",
+      position: "bottom-right",
+      isActive: true,
+      offlineMessage: "We're currently offline. Leave a message and we'll get back to you!",
+      showWhenOffline: true,
+    },
+  });
+
+  const chatConversations = [
+    {
+      id: "conv-1",
+      visitorName: "Sarah Wilson",
+      visitorEmail: "sarah@example.com",
+      status: "open",
+      messageCount: 3,
+      lastMessageAt: new Date(Date.now() - 10 * 60 * 1000),
+      messages: [
+        { senderType: "visitor", content: "Hi! I have a question about pricing." },
+        { senderType: "agent", senderId: user.id, content: "Hello Sarah! I'd be happy to help with pricing. What plan are you interested in?" },
+        { senderType: "visitor", content: "I'm looking at the Professional plan for a team of 10." },
+      ],
+    },
+    {
+      id: "conv-2",
+      visitorName: "Mike Chen",
+      visitorEmail: "mike@startup.com",
+      status: "assigned",
+      assigneeId: user.id,
+      messageCount: 5,
+      lastMessageAt: new Date(Date.now() - 30 * 60 * 1000),
+      messages: [
+        { senderType: "visitor", content: "Does F-CORE integrate with Slack?" },
+        { senderType: "agent", senderId: user.id, content: "Yes! We have a native Slack integration." },
+        { senderType: "visitor", content: "Great! How do I set it up?" },
+        { senderType: "agent", senderId: user.id, content: "Go to Settings > Integrations > Slack and click Connect." },
+        { senderType: "visitor", content: "Perfect, thanks!" },
+      ],
+    },
+    {
+      id: "conv-3",
+      visitorName: "Emily Parker",
+      visitorEmail: "emily@agency.co",
+      status: "resolved",
+      assigneeId: user.id,
+      messageCount: 4,
+      rating: 5,
+      lastMessageAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      messages: [
+        { senderType: "visitor", content: "I need help with data import." },
+        { senderType: "agent", senderId: user.id, content: "I can help! What format is your data in?" },
+        { senderType: "visitor", content: "CSV file with about 5000 contacts." },
+        { senderType: "agent", senderId: user.id, content: "You can use the Import feature in Contacts. Go to Contacts > Import and upload your CSV." },
+      ],
+    },
+    {
+      id: "conv-4",
+      visitorName: "Anonymous Visitor",
+      status: "closed",
+      messageCount: 1,
+      lastMessageAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      messages: [
+        { senderType: "visitor", content: "Just browsing, thanks!" },
+      ],
+    },
+  ];
+
+  for (const conv of chatConversations) {
+    const { messages, ...convFields } = conv;
+    await prisma.chatConversation.upsert({
+      where: { id: conv.id },
+      update: {},
+      create: {
+        id: convFields.id,
+        tenantId: tenant.id,
+        widgetId: chatWidget.id,
+        visitorName: convFields.visitorName,
+        visitorEmail: convFields.visitorEmail || null,
+        status: convFields.status,
+        assigneeId: convFields.assigneeId || null,
+        messageCount: convFields.messageCount,
+        rating: convFields.rating || null,
+        lastMessageAt: convFields.lastMessageAt,
+      },
+    });
+
+    for (const msg of messages) {
+      await prisma.chatMessage.create({
+        data: {
+          conversationId: conv.id,
+          senderType: msg.senderType,
+          senderId: msg.senderId || null,
+          content: msg.content,
+        },
+      });
+    }
+  }
+  console.log("✅ Created chat widget with 4 conversations");
+
+  // ============================================
+  // NOTIFICATIONS
+  // ============================================
+
+  const notificationData = [
+    {
+      id: "notif-1",
+      type: "deal",
+      title: "Deal Closed Won!",
+      message: "TechCorp Enterprise deal worth $24,000 has been marked as Closed Won.",
+      link: "/deals",
+      isRead: false,
+    },
+    {
+      id: "notif-2",
+      type: "contact",
+      title: "New Contact Created",
+      message: "John Doe has been added to your CRM.",
+      link: "/contacts",
+      isRead: false,
+    },
+    {
+      id: "notif-3",
+      type: "ticket",
+      title: "Ticket Assigned to You",
+      message: "Ticket #1: Cannot export contacts to CSV has been assigned to you.",
+      link: "/tickets",
+      isRead: true,
+      readAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+    },
+    {
+      id: "notif-4",
+      type: "email",
+      title: "Campaign Sent Successfully",
+      message: "Q1 Product Launch campaign was sent to 2,450 recipients.",
+      link: "/email-marketing",
+      isRead: true,
+      readAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+    },
+    {
+      id: "notif-5",
+      type: "contact",
+      title: "Form Submission Received",
+      message: "New submission on Contact Us form from alice@enterprise.com.",
+      link: "/forms",
+      isRead: false,
+    },
+  ];
+
+  for (const n of notificationData) {
+    await prisma.notification.upsert({
+      where: { id: n.id },
+      update: {},
+      create: {
+        id: n.id,
+        tenantId: tenant.id,
+        userId: user.id,
+        type: n.type,
+        title: n.title,
+        message: n.message,
+        link: n.link,
+        isRead: n.isRead,
+        readAt: n.readAt || null,
+      },
+    });
+  }
+  console.log("✅ Created 5 notifications");
+
+  // ============================================
+  // WEBHOOKS
+  // ============================================
+
+  const webhookData = [
+    {
+      id: "webhook-1",
+      name: "Slack Notifications",
+      url: "https://hooks.slack.com/services/T00000/B00000/XXXX",
+      events: ["contact.created", "deal.won", "ticket.created"],
+      isActive: true,
+      successCount: 1247,
+      failureCount: 3,
+      lastTriggeredAt: new Date(Date.now() - 15 * 60 * 1000),
+    },
+    {
+      id: "webhook-2",
+      name: "Zapier Integration",
+      url: "https://hooks.zapier.com/hooks/catch/12345/abcdef",
+      events: ["contact.created", "contact.updated", "deal.stage_changed"],
+      isActive: true,
+      successCount: 856,
+      failureCount: 12,
+      lastTriggeredAt: new Date(Date.now() - 60 * 60 * 1000),
+    },
+    {
+      id: "webhook-3",
+      name: "Analytics Tracker",
+      url: "https://analytics.example.com/webhook",
+      events: ["deal.created", "deal.won", "deal.lost"],
+      isActive: false,
+      successCount: 0,
+      failureCount: 0,
+    },
+  ];
+
+  for (const wh of webhookData) {
+    await prisma.webhook.upsert({
+      where: { id: wh.id },
+      update: {},
+      create: {
+        id: wh.id,
+        tenantId: tenant.id,
+        userId: user.id,
+        name: wh.name,
+        url: wh.url,
+        events: wh.events,
+        isActive: wh.isActive,
+        successCount: wh.successCount,
+        failureCount: wh.failureCount,
+        lastTriggeredAt: wh.lastTriggeredAt || null,
+      },
+    });
+  }
+  console.log("✅ Created 3 webhooks");
+
+  // ============================================
+  // AUDIT LOG
+  // ============================================
+
+  const auditData = [
+    { action: "created", entity: "contact", entityId: "contact-john@example.com", entityName: "John Doe" },
+    { action: "updated", entity: "deal", entityId: "deal-1", entityName: "TechCorp Enterprise", changes: { status: { from: "Proposal", to: "Closed Won" } } },
+    { action: "created", entity: "ticket", entityId: "ticket-1", entityName: "Cannot export contacts to CSV" },
+    { action: "exported", entity: "contacts", entityId: "", entityName: "All Contacts", metadata: { format: "csv", count: 15 } },
+    { action: "created", entity: "campaign", entityId: "campaign-1", entityName: "Q1 Product Launch" },
+    { action: "updated", entity: "workflow", entityId: "workflow-1", entityName: "Welcome New Contacts", changes: { status: { from: "draft", to: "active" } } },
+    { action: "deleted", entity: "contact", entityId: "contact-removed", entityName: "Old Contact" },
+    { action: "created", entity: "quote", entityId: "quote-1", entityName: "TechCorp Enterprise License" },
+  ];
+
+  for (const a of auditData) {
+    await prisma.auditLog.create({
+      data: {
+        tenantId: tenant.id,
+        userId: user.id,
+        action: a.action,
+        entity: a.entity,
+        entityId: a.entityId,
+        entityName: a.entityName,
+        changes: a.changes || {},
+        metadata: a.metadata || {},
+      },
+    });
+  }
+  console.log("✅ Created 8 audit log entries");
+
   console.log("🎉 Seeding completed!");
 }
 

@@ -39,6 +39,14 @@ model User {
   availability   UserAvailability[]
   assignedTickets Ticket[] @relation("TicketAssignee")
   createdTickets  Ticket[] @relation("TicketCreator")
+  notifications   Notification[]
+  savedViews      SavedView[]
+  sequences       Sequence[] @relation("SequenceOwner")
+  quotes          Quote[] @relation("QuoteOwner")
+  landingPages    LandingPage[] @relation("LandingPageOwner")
+  chatAssigned    ChatConversation[] @relation("ChatAssignee")
+  webhooks        Webhook[]
+  auditLogs       AuditLog[]
 
   @@index([tenantId])
   @@index([email])
@@ -66,6 +74,15 @@ model Tenant {
   meetingTypes   MeetingType[]
   meetingLinks   MeetingLink[]
   tickets        Ticket[]
+  notifications   Notification[]
+  savedViews      SavedView[]
+  sequences       Sequence[]
+  quotes          Quote[]
+  landingPages    LandingPage[]
+  chatWidgets     ChatWidget[]
+  chatConversations ChatConversation[]
+  webhooks        Webhook[]
+  auditLogs       AuditLog[]
 }
 
 // ============================================
@@ -120,6 +137,9 @@ model Contact {
   activities      Activity[]
   formSubmissions FormSubmission[]
   tickets         Ticket[]
+  sequenceEnrollments SequenceEnrollment[]
+  quotes          Quote[]
+  chatConversations ChatConversation[]
 
   @@index([tenantId])
   @@index([email])
@@ -177,6 +197,7 @@ model Company {
   deals           DealCompany[]
   activities      Activity[]
   tickets         Ticket[]
+  quotes          Quote[]
 
   @@index([tenantId])
   @@index([domain])
@@ -227,6 +248,7 @@ model Deal {
   contacts        DealContact[]
   companies       DealCompany[]
   activities      Activity[]
+  quotes          Quote[]
 
   @@index([tenantId])
   @@index([pipelineId])
@@ -943,4 +965,360 @@ model Ticket {
   @@index([contactId])
   @@index([companyId])
   @@index([deletedAt])
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id          String    @id @default(uuid())
+  tenantId    String
+  userId      String
+
+  type        String    // deal_update, task_due, mention, system, ticket_assigned, form_submission
+  title       String
+  message     String?   @db.Text
+  link        String?
+  icon        String?
+
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+
+  metadata    Json      @default("{}")
+
+  createdAt   DateTime  @default(now())
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId, isRead])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+// ============================================
+// SAVED VIEWS & ADVANCED FILTERS
+// ============================================
+
+model SavedView {
+  id          String    @id @default(uuid())
+  tenantId    String
+  userId      String
+
+  name        String
+  module      String    // contacts, companies, deals, tickets
+  filters     Json      @default("[]")
+  columns     Json      @default("[]")
+  sortBy      String?
+  sortOrder   String?   @default("asc")
+  isDefault   Boolean   @default(false)
+  isShared    Boolean   @default(false)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, module])
+  @@index([userId])
+}
+
+// ============================================
+// SEQUENCES (Sales Automation)
+// ============================================
+
+model Sequence {
+  id              String    @id @default(uuid())
+  tenantId        String
+
+  name            String
+  description     String?   @db.Text
+  status          String    @default("draft") // draft, active, paused
+  ownerId         String?
+
+  steps           Json      @default("[]")
+
+  enrolledCount   Int       @default(0)
+  completedCount  Int       @default(0)
+  replyRate       Decimal?  @db.Decimal(5, 2)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  owner           User?     @relation("SequenceOwner", fields: [ownerId], references: [id])
+  enrollments     SequenceEnrollment[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([deletedAt])
+}
+
+model SequenceEnrollment {
+  id              String    @id @default(uuid())
+  sequenceId      String
+  contactId       String
+
+  status          String    @default("active") // active, completed, paused, bounced, replied, unsubscribed
+  currentStep     Int       @default(0)
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  lastStepAt      DateTime?
+  nextStepAt      DateTime?
+
+  sequence        Sequence  @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  contact         Contact   @relation(fields: [contactId], references: [id])
+
+  @@unique([sequenceId, contactId])
+  @@index([sequenceId])
+  @@index([contactId])
+  @@index([status])
+}
+
+// ============================================
+// QUOTES & INVOICES
+// ============================================
+
+model Quote {
+  id              String    @id @default(uuid())
+  tenantId        String
+  quoteNumber     Int       @default(autoincrement())
+
+  title           String
+  status          String    @default("draft") // draft, pending, approved, rejected, expired
+  expiresAt       DateTime?
+
+  dealId          String?
+  contactId       String?
+  companyId       String?
+  ownerId         String?
+
+  subtotal        Decimal   @default(0) @db.Decimal(15, 2)
+  discount        Decimal   @default(0) @db.Decimal(15, 2)
+  tax             Decimal   @default(0) @db.Decimal(15, 2)
+  total           Decimal   @default(0) @db.Decimal(15, 2)
+  currency        String    @default("USD")
+
+  notes           String?   @db.Text
+  terms           String?   @db.Text
+  paymentTerms    String?
+
+  sentAt          DateTime?
+  approvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  owner           User?     @relation("QuoteOwner", fields: [ownerId], references: [id])
+  deal            Deal?     @relation(fields: [dealId], references: [id])
+  contact         Contact?  @relation(fields: [contactId], references: [id])
+  company         Company?  @relation(fields: [companyId], references: [id])
+  lineItems       QuoteLineItem[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([dealId])
+  @@index([contactId])
+  @@index([deletedAt])
+}
+
+model QuoteLineItem {
+  id          String    @id @default(uuid())
+  quoteId     String
+
+  name        String
+  description String?
+  quantity    Int       @default(1)
+  unitPrice   Decimal   @db.Decimal(15, 2)
+  discount    Decimal   @default(0) @db.Decimal(5, 2)
+  total       Decimal   @db.Decimal(15, 2)
+  orderIndex  Int       @default(0)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  quote       Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId])
+}
+
+// ============================================
+// LANDING PAGES
+// ============================================
+
+model LandingPage {
+  id              String    @id @default(uuid())
+  tenantId        String
+
+  name            String
+  slug            String
+  description     String?
+
+  contentHtml     String?   @db.Text
+  contentJson     Json?
+  templateId      String?
+
+  status          String    @default("draft") // draft, published, archived
+  publishedAt     DateTime?
+
+  metaTitle       String?
+  metaDescription String?   @db.Text
+
+  viewCount       Int       @default(0)
+  conversionCount Int       @default(0)
+  formId          String?
+
+  ownerId         String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  owner           User?     @relation("LandingPageOwner", fields: [ownerId], references: [id])
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([deletedAt])
+}
+
+// ============================================
+// LIVE CHAT
+// ============================================
+
+model ChatWidget {
+  id              String    @id @default(uuid())
+  tenantId        String
+
+  name            String
+  welcomeMessage  String    @default("Hi there! How can we help?")
+  color           String    @default("#0891b2")
+  position        String    @default("bottom-right")
+  isActive        Boolean   @default(true)
+
+  offlineMessage  String?
+  showWhenOffline Boolean   @default(true)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  conversations   ChatConversation[]
+
+  @@index([tenantId])
+}
+
+model ChatConversation {
+  id              String    @id @default(uuid())
+  tenantId        String
+  widgetId        String
+
+  visitorName     String?
+  visitorEmail    String?
+  contactId       String?
+
+  status          String    @default("open") // open, assigned, resolved, closed
+  assigneeId      String?
+
+  lastMessageAt   DateTime?
+  messageCount    Int       @default(0)
+  rating          Int?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  widget          ChatWidget @relation(fields: [widgetId], references: [id])
+  assignee        User?     @relation("ChatAssignee", fields: [assigneeId], references: [id])
+  contact         Contact?  @relation(fields: [contactId], references: [id])
+  messages        ChatMessage[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([assigneeId])
+  @@index([widgetId])
+}
+
+model ChatMessage {
+  id              String    @id @default(uuid())
+  conversationId  String
+
+  senderType      String    // visitor, agent, system
+  senderId        String?
+  content         String    @db.Text
+  attachments     Json?
+
+  isRead          Boolean   @default(false)
+
+  createdAt       DateTime  @default(now())
+
+  conversation    ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([conversationId, createdAt])
+}
+
+// ============================================
+// WEBHOOKS & INTEGRATIONS
+// ============================================
+
+model Webhook {
+  id          String    @id @default(uuid())
+  tenantId    String
+  userId      String
+
+  name        String
+  url         String
+  secret      String?
+  events      Json      @default("[]")
+  isActive    Boolean   @default(true)
+
+  lastTriggeredAt DateTime?
+  successCount    Int     @default(0)
+  failureCount    Int     @default(0)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+// ============================================
+// AUDIT LOG
+// ============================================
+
+model AuditLog {
+  id          String    @id @default(uuid())
+  tenantId    String
+  userId      String?
+
+  action      String    // created, updated, deleted, viewed, exported, imported
+  entity      String    // contact, company, deal, ticket, etc.
+  entityId    String?
+  entityName  String?
+
+  changes     Json?
+  metadata    Json      @default("{}")
+
+  ipAddress   String?
+  userAgent   String?
+
+  createdAt   DateTime  @default(now())
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  user        User?     @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, entity])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([entityId])
 }
