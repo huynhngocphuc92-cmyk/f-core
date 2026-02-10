@@ -9,6 +9,7 @@ const globalForPrisma = globalThis as unknown as {
 
 const pool = globalForPrisma.pool ?? new pg.Pool({
   connectionString: process.env.DATABASE_URL || "postgresql://postgres:123456@localhost:5432/hubspot_clone?schema=public",
+  max: 1,
 });
 
 const adapter = new PrismaPg(pool);
