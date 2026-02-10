@@ -12,12 +12,11 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log("🌱 Seeding database...");
 
-  // Create tenant with fixed ID matching API routes
+  // Create tenant - use existing if found, otherwise create new
   const tenant = await prisma.tenant.upsert({
     where: { domain: "demo.f-core.com" },
-    update: { id: "demo-tenant" },
+    update: {},
     create: {
-      id: "demo-tenant",
       name: "F-CORE Demo",
       domain: "demo.f-core.com",
       plan: "professional",
@@ -878,6 +877,476 @@ async function main() {
   });
 
   console.log("✅ Created 2 dashboards with 6 widgets");
+
+  // ============================================
+  // TICKETS - Service Hub
+  // ============================================
+
+  const ticketData = [
+    {
+      id: "ticket-1",
+      subject: "Cannot export contacts to CSV",
+      description: "When I try to export my contacts list to CSV, the download starts but the file is empty. Tried in Chrome and Firefox.",
+      category: "bug",
+      status: "open",
+      priority: "high",
+      contactId: "contact-john@example.com",
+      companyId: "company-techcorp.com",
+      source: "web",
+    },
+    {
+      id: "ticket-2",
+      subject: "How to set up email integration?",
+      description: "I'd like to connect my Gmail account to the CRM. Can you provide instructions or documentation?",
+      category: "question",
+      status: "in_progress",
+      priority: "medium",
+      contactId: "contact-jane@techcorp.com",
+      source: "email",
+    },
+    {
+      id: "ticket-3",
+      subject: "Request: Bulk edit contacts",
+      description: "We need the ability to bulk edit contact fields like lifecycle stage and owner. Currently we have to update each contact individually which is very time consuming.",
+      category: "feature",
+      status: "open",
+      priority: "medium",
+      contactId: "contact-bob@startup.io",
+      companyId: "company-startup.io",
+      source: "web",
+    },
+    {
+      id: "ticket-4",
+      subject: "Pipeline view not loading on mobile",
+      description: "The Kanban pipeline view doesn't render properly on iPhone 15. Cards overlap and drag-and-drop doesn't work.",
+      category: "bug",
+      status: "waiting",
+      priority: "high",
+      contactId: "contact-alice@enterprise.com",
+      companyId: "company-enterprise.com",
+      source: "chat",
+    },
+    {
+      id: "ticket-5",
+      subject: "Account billing question",
+      description: "We were charged twice for our Professional plan this month. Please investigate and refund the duplicate charge.",
+      category: "support",
+      status: "resolved",
+      priority: "urgent",
+      contactId: "contact-charlie@agency.co",
+      companyId: "company-agency.co",
+      source: "phone",
+      resolvedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    },
+    {
+      id: "ticket-6",
+      subject: "API rate limit too low",
+      description: "Our integration is hitting the API rate limit at 100 requests/minute. We need at least 500/min for our use case.",
+      category: "feature",
+      status: "open",
+      priority: "low",
+      contactId: "contact-jane@techcorp.com",
+      companyId: "company-techcorp.com",
+      source: "email",
+    },
+    {
+      id: "ticket-7",
+      subject: "Dashboard widgets not refreshing",
+      description: "The sales dashboard widgets show stale data. They only update after a full page refresh, not automatically.",
+      category: "bug",
+      status: "closed",
+      priority: "medium",
+      contactId: "contact-bob@startup.io",
+      source: "web",
+      resolvedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+      closedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
+    },
+    {
+      id: "ticket-8",
+      subject: "Need help with workflow automation setup",
+      description: "I want to create a workflow that automatically assigns leads to sales reps based on territory. Can someone walk me through this?",
+      category: "question",
+      status: "in_progress",
+      priority: "medium",
+      contactId: "contact-alice@enterprise.com",
+      source: "chat",
+    },
+  ];
+
+  for (const t of ticketData) {
+    await prisma.ticket.upsert({
+      where: { id: t.id },
+      update: {},
+      create: {
+        id: t.id,
+        tenantId: tenant.id,
+        assigneeId: user.id,
+        createdById: user.id,
+        subject: t.subject,
+        description: t.description,
+        category: t.category,
+        status: t.status,
+        priority: t.priority,
+        contactId: t.contactId,
+        companyId: t.companyId || null,
+        source: t.source,
+        resolvedAt: t.resolvedAt || null,
+        closedAt: t.closedAt || null,
+        tags: ["crm"],
+      },
+    });
+  }
+  console.log("✅ Created 8 tickets");
+
+  // ============================================
+  // EMAIL CAMPAIGNS - Marketing Hub
+  // ============================================
+
+  const campaignData = [
+    {
+      id: "campaign-1",
+      name: "Q1 Product Launch",
+      subject: "Introducing F-CORE 2.0 - Your CRM, Reimagined",
+      body: "<h1>F-CORE 2.0 is Here!</h1><p>We've rebuilt the CRM experience from the ground up...</p>",
+      previewText: "See what's new in F-CORE 2.0",
+      status: "sent",
+      sentAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+      recipientCount: 2450,
+      sentCount: 2430,
+      deliveredCount: 2380,
+      openedCount: 1142,
+      clickedCount: 387,
+      bouncedCount: 50,
+      unsubscribedCount: 12,
+    },
+    {
+      id: "campaign-2",
+      name: "Monthly Newsletter - January",
+      subject: "What's New This Month at F-CORE",
+      body: "<h1>January Newsletter</h1><p>Here's what happened this month...</p>",
+      previewText: "Product updates, tips, and more",
+      status: "sent",
+      sentAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      recipientCount: 1850,
+      sentCount: 1840,
+      deliveredCount: 1810,
+      openedCount: 724,
+      clickedCount: 198,
+      bouncedCount: 30,
+      unsubscribedCount: 5,
+    },
+    {
+      id: "campaign-3",
+      name: "Webinar Invitation: CRM Best Practices",
+      subject: "You're Invited: Master Your Sales Pipeline",
+      body: "<h1>Join Our Free Webinar</h1><p>Learn how top sales teams use CRM to close more deals...</p>",
+      previewText: "Reserve your spot - limited seats",
+      status: "scheduled",
+      scheduledAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      recipientCount: 3200,
+    },
+    {
+      id: "campaign-4",
+      name: "Feature Announcement: Workflow Automation",
+      subject: "Automate Your Sales Process with Workflows",
+      body: "<h1>New Feature: Workflows</h1><p>Set up automated processes to save hours every week...</p>",
+      previewText: "New automation features just dropped",
+      status: "draft",
+    },
+    {
+      id: "campaign-5",
+      name: "Customer Success Stories",
+      subject: "How TechCorp Grew Revenue 3x with F-CORE",
+      body: "<h1>Success Story</h1><p>Read how our customers are winning...</p>",
+      previewText: "Real results from real customers",
+      status: "sent",
+      sentAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000),
+      recipientCount: 1500,
+      sentCount: 1490,
+      deliveredCount: 1460,
+      openedCount: 876,
+      clickedCount: 312,
+      bouncedCount: 30,
+      unsubscribedCount: 8,
+    },
+    {
+      id: "campaign-6",
+      name: "Re-engagement: We Miss You!",
+      subject: "It's been a while - here's what you're missing",
+      body: "<h1>Come Back!</h1><p>We've made lots of improvements since you last visited...</p>",
+      previewText: "New features and improvements await",
+      status: "draft",
+    },
+  ];
+
+  for (const c of campaignData) {
+    await prisma.emailCampaign.upsert({
+      where: { id: c.id },
+      update: {},
+      create: {
+        id: c.id,
+        tenantId: tenant.id,
+        ownerId: user.id,
+        name: c.name,
+        subject: c.subject,
+        body: c.body,
+        previewText: c.previewText || null,
+        status: c.status,
+        scheduledAt: c.scheduledAt || null,
+        sentAt: c.sentAt || null,
+        recipientCount: c.recipientCount || 0,
+        sentCount: c.sentCount || 0,
+        deliveredCount: c.deliveredCount || 0,
+        openedCount: c.openedCount || 0,
+        clickedCount: c.clickedCount || 0,
+        bouncedCount: c.bouncedCount || 0,
+        unsubscribedCount: c.unsubscribedCount || 0,
+      },
+    });
+  }
+  console.log("✅ Created 6 email campaigns");
+
+  // ============================================
+  // WORKFLOWS - Automation Hub
+  // ============================================
+
+  const workflowData = [
+    {
+      id: "workflow-1",
+      name: "Welcome New Contacts",
+      description: "Automatically send a welcome email when a new contact is created and create a follow-up task for the sales team.",
+      triggerType: "contact_created",
+      triggerConfig: {},
+      status: "active",
+      isActive: true,
+      enrolledCount: 234,
+      completedCount: 198,
+      lastTriggeredAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      actions: [
+        { type: "send_email", config: { templateName: "Welcome Email", delay: 0 } },
+        { type: "wait", config: { duration: 1, unit: "days" } },
+        { type: "create_task", config: { title: "Follow up with new contact", assignTo: "owner", dueInDays: 3 } },
+      ],
+    },
+    {
+      id: "workflow-2",
+      name: "Deal Won Celebration",
+      description: "When a deal moves to Closed Won, send an internal notification and update the contact lifecycle stage to Customer.",
+      triggerType: "deal_stage_changed",
+      triggerConfig: { toStage: "Closed Won" },
+      status: "active",
+      isActive: true,
+      enrolledCount: 45,
+      completedCount: 42,
+      lastTriggeredAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      actions: [
+        { type: "send_email", config: { templateName: "Deal Won Notification", to: "owner" } },
+        { type: "update_property", config: { object: "contact", field: "lifecycleStage", value: "customer" } },
+        { type: "create_task", config: { title: "Schedule onboarding call", assignTo: "owner", dueInDays: 1 } },
+      ],
+    },
+    {
+      id: "workflow-3",
+      name: "Form Submission Follow-up",
+      description: "When a contact submits the Contact Us form, assign to sales and create a follow-up task.",
+      triggerType: "form_submitted",
+      triggerConfig: { formId: "form-contact-us" },
+      status: "active",
+      isActive: true,
+      enrolledCount: 89,
+      completedCount: 76,
+      lastTriggeredAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
+      actions: [
+        { type: "send_email", config: { templateName: "Thank You for Contacting Us" } },
+        { type: "update_property", config: { object: "contact", field: "leadStatus", value: "new" } },
+        { type: "create_task", config: { title: "Review form submission", assignTo: "owner", dueInDays: 1 } },
+      ],
+    },
+    {
+      id: "workflow-4",
+      name: "Lead Nurture Sequence",
+      description: "A 3-email drip sequence for MQL contacts who haven't converted to SQL within 7 days.",
+      triggerType: "manual",
+      triggerConfig: {},
+      status: "paused",
+      isActive: false,
+      enrolledCount: 156,
+      completedCount: 89,
+      actions: [
+        { type: "send_email", config: { templateName: "Nurture Email 1 - Case Study" } },
+        { type: "wait", config: { duration: 3, unit: "days" } },
+        { type: "if_branch", config: { condition: "contact.lifecycleStage != 'sql'", thenAction: "continue", elseAction: "stop" } },
+        { type: "send_email", config: { templateName: "Nurture Email 2 - Product Demo" } },
+        { type: "wait", config: { duration: 4, unit: "days" } },
+        { type: "send_email", config: { templateName: "Nurture Email 3 - Special Offer" } },
+      ],
+    },
+    {
+      id: "workflow-5",
+      name: "Stale Deal Alert",
+      description: "Alert deal owners when a deal hasn't been updated in 14 days.",
+      triggerType: "manual",
+      triggerConfig: {},
+      status: "draft",
+      isActive: false,
+      enrolledCount: 0,
+      completedCount: 0,
+      actions: [
+        { type: "if_branch", config: { condition: "deal.daysSinceUpdate > 14" } },
+        { type: "send_email", config: { templateName: "Stale Deal Alert", to: "owner" } },
+        { type: "create_task", config: { title: "Review stale deal", assignTo: "owner", dueInDays: 2 } },
+      ],
+    },
+  ];
+
+  for (const w of workflowData) {
+    await prisma.workflow.upsert({
+      where: { id: w.id },
+      update: {},
+      create: {
+        id: w.id,
+        tenantId: tenant.id,
+        ownerId: user.id,
+        name: w.name,
+        description: w.description,
+        triggerType: w.triggerType,
+        triggerConfig: w.triggerConfig,
+        actions: w.actions,
+        status: w.status,
+        isActive: w.isActive,
+        enrolledCount: w.enrolledCount,
+        completedCount: w.completedCount,
+        lastTriggeredAt: w.lastTriggeredAt || null,
+      },
+    });
+  }
+  console.log("✅ Created 5 workflows");
+
+  // ============================================
+  // MEETING TYPES & LINKS - Sales Hub
+  // ============================================
+
+  const meetingType1 = await prisma.meetingType.upsert({
+    where: { id: "mtype-quick-call" },
+    update: {},
+    create: {
+      id: "mtype-quick-call",
+      tenantId: tenant.id,
+      ownerId: user.id,
+      name: "15-min Quick Call",
+      slug: "quick-call",
+      duration: 15,
+      color: "#0891b2",
+      description: "A quick 15-minute call to discuss your needs and see if we're a good fit.",
+      location: "Google Meet",
+      isActive: true,
+      bufferBefore: 5,
+      bufferAfter: 5,
+    },
+  });
+
+  const meetingType2 = await prisma.meetingType.upsert({
+    where: { id: "mtype-product-demo" },
+    update: {},
+    create: {
+      id: "mtype-product-demo",
+      tenantId: tenant.id,
+      ownerId: user.id,
+      name: "30-min Product Demo",
+      slug: "product-demo",
+      duration: 30,
+      color: "#8b5cf6",
+      description: "A comprehensive demo of F-CORE CRM tailored to your business needs.",
+      location: "Zoom",
+      isActive: true,
+      bufferBefore: 5,
+      bufferAfter: 10,
+    },
+  });
+
+  const meetingType3 = await prisma.meetingType.upsert({
+    where: { id: "mtype-consultation" },
+    update: {},
+    create: {
+      id: "mtype-consultation",
+      tenantId: tenant.id,
+      ownerId: user.id,
+      name: "60-min Strategy Consultation",
+      slug: "strategy-consultation",
+      duration: 60,
+      color: "#059669",
+      description: "An in-depth consultation to plan your CRM strategy and implementation roadmap.",
+      location: "Zoom",
+      isActive: true,
+      bufferBefore: 10,
+      bufferAfter: 15,
+    },
+  });
+
+  console.log("✅ Created 3 meeting types");
+
+  // Meeting links
+  await prisma.meetingLink.upsert({
+    where: { id: "mlink-1" },
+    update: {},
+    create: {
+      id: "mlink-1",
+      tenantId: tenant.id,
+      slug: "admin-quick-call",
+      userId: user.id,
+      meetingTypeId: meetingType1.id,
+      isActive: true,
+      customMessage: "Thanks for booking a quick call! I look forward to chatting with you.",
+    },
+  });
+
+  await prisma.meetingLink.upsert({
+    where: { id: "mlink-2" },
+    update: {},
+    create: {
+      id: "mlink-2",
+      tenantId: tenant.id,
+      slug: "admin-product-demo",
+      userId: user.id,
+      meetingTypeId: meetingType2.id,
+      isActive: true,
+      customMessage: "Excited to show you what F-CORE can do for your business!",
+    },
+  });
+
+  await prisma.meetingLink.upsert({
+    where: { id: "mlink-3" },
+    update: {},
+    create: {
+      id: "mlink-3",
+      tenantId: tenant.id,
+      slug: "admin-consultation",
+      userId: user.id,
+      meetingTypeId: meetingType3.id,
+      isActive: true,
+      customMessage: "Let's dive deep into your CRM needs and build a plan together.",
+    },
+  });
+
+  console.log("✅ Created 3 meeting links");
+
+  // User availability (Mon-Fri, 9am-5pm)
+  for (let day = 1; day <= 5; day++) {
+    await prisma.userAvailability.upsert({
+      where: {
+        userId_dayOfWeek: { userId: user.id, dayOfWeek: day },
+      },
+      update: {},
+      create: {
+        userId: user.id,
+        dayOfWeek: day,
+        startTime: "09:00",
+        endTime: "17:00",
+        isActive: true,
+      },
+    });
+  }
+  console.log("✅ Created user availability (Mon-Fri 9am-5pm)");
 
   console.log("🎉 Seeding completed!");
 }
