@@ -316,3 +316,138 @@ export async function createActivity(formData: FormData) {
 
   return { success: true };
 }
+
+// ============================================
+// SEARCH (for association picker)
+// ============================================
+
+export async function searchContacts(query: string) {
+  const tenantId = await getTenantId();
+  const contacts = await prisma.contact.findMany({
+    where: {
+      tenantId,
+      deletedAt: null,
+      OR: [
+        { firstName: { contains: query, mode: "insensitive" } },
+        { lastName: { contains: query, mode: "insensitive" } },
+        { email: { contains: query, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true, firstName: true, lastName: true, email: true },
+    take: 10,
+  });
+  return contacts.map((c) => ({
+    id: c.id,
+    label: [c.firstName, c.lastName].filter(Boolean).join(" ") || c.email || "Unnamed",
+    subtitle: c.email || undefined,
+  }));
+}
+
+export async function searchCompanies(query: string) {
+  const tenantId = await getTenantId();
+  const companies = await prisma.company.findMany({
+    where: {
+      tenantId,
+      deletedAt: null,
+      OR: [
+        { name: { contains: query, mode: "insensitive" } },
+        { domain: { contains: query, mode: "insensitive" } },
+      ],
+    },
+    select: { id: true, name: true, domain: true },
+    take: 10,
+  });
+  return companies.map((c) => ({
+    id: c.id,
+    label: c.name,
+    subtitle: c.domain || undefined,
+  }));
+}
+
+export async function searchDeals(query: string) {
+  const tenantId = await getTenantId();
+  const deals = await prisma.deal.findMany({
+    where: {
+      tenantId,
+      deletedAt: null,
+      name: { contains: query, mode: "insensitive" },
+    },
+    select: { id: true, name: true, amount: true },
+    take: 10,
+  });
+  return deals.map((d) => ({
+    id: d.id,
+    label: d.name,
+    subtitle: d.amount ? `$${Number(d.amount).toLocaleString()}` : undefined,
+  }));
+}
+
+// ============================================
+// ASSOCIATION MANAGEMENT
+// ============================================
+
+export async function addContactToCompany(contactId: string, companyId: string) {
+  try {
+    await prisma.contactCompany.create({
+      data: { contactId, companyId },
+    });
+  } catch {
+    return { error: "Association already exists" };
+  }
+  revalidatePath(`/contacts/${contactId}`);
+  revalidatePath(`/companies/${companyId}`);
+  return { success: true };
+}
+
+export async function removeContactFromCompany(contactId: string, companyId: string) {
+  await prisma.contactCompany.delete({
+    where: { contactId_companyId: { contactId, companyId } },
+  });
+  revalidatePath(`/contacts/${contactId}`);
+  revalidatePath(`/companies/${companyId}`);
+  return { success: true };
+}
+
+export async function addContactToDeal(dealId: string, contactId: string) {
+  try {
+    await prisma.dealContact.create({
+      data: { dealId, contactId },
+    });
+  } catch {
+    return { error: "Association already exists" };
+  }
+  revalidatePath(`/deals/${dealId}`);
+  revalidatePath(`/contacts/${contactId}`);
+  return { success: true };
+}
+
+export async function removeContactFromDeal(dealId: string, contactId: string) {
+  await prisma.dealContact.delete({
+    where: { dealId_contactId: { dealId, contactId } },
+  });
+  revalidatePath(`/deals/${dealId}`);
+  revalidatePath(`/contacts/${contactId}`);
+  return { success: true };
+}
+
+export async function addCompanyToDeal(dealId: string, companyId: string) {
+  try {
+    await prisma.dealCompany.create({
+      data: { dealId, companyId },
+    });
+  } catch {
+    return { error: "Association already exists" };
+  }
+  revalidatePath(`/deals/${dealId}`);
+  revalidatePath(`/companies/${companyId}`);
+  return { success: true };
+}
+
+export async function removeCompanyFromDeal(dealId: string, companyId: string) {
+  await prisma.dealCompany.delete({
+    where: { dealId_companyId: { dealId, companyId } },
+  });
+  revalidatePath(`/deals/${dealId}`);
+  revalidatePath(`/companies/${companyId}`);
+  return { success: true };
+}

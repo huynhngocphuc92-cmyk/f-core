@@ -16,6 +16,12 @@ import {
 } from "lucide-react";
 import DeleteButton from "@/components/crm/DeleteButton";
 import ActivityForm from "@/components/crm/ActivityForm";
+import AssociationPicker, { RemoveAssociationButton } from "@/components/crm/AssociationPicker";
+import {
+  searchCompanies,
+  addContactToCompany,
+  removeContactFromCompany,
+} from "@/app/actions/crm";
 
 export const dynamic = "force-dynamic";
 
@@ -392,29 +398,50 @@ export default async function ContactDetailPage({
           </div>
 
           {/* Associated Companies Card */}
-          {contact.companies.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">
-                Companies
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                Companies ({contact.companies.length})
               </h3>
+              <AssociationPicker
+                associationType="company"
+                existingIds={contact.companies.map((cc) => cc.companyId)}
+                searchAction={searchCompanies}
+                addAction={async (companyId: string) => {
+                  "use server";
+                  return addContactToCompany(contact.id, companyId);
+                }}
+              />
+            </div>
+            {contact.companies.length === 0 ? (
+              <p className="text-sm text-gray-500">No companies associated</p>
+            ) : (
               <div className="space-y-2">
                 {contact.companies.map((cc) => (
                   <div
                     key={cc.companyId}
-                    className="flex items-center gap-2 text-sm"
+                    className="flex items-center gap-2 text-sm group"
                   >
                     <Briefcase className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-900">{cc.company.name}</span>
+                    <Link href={`/companies/${cc.companyId}`} className="text-gray-900 hover:text-[#0891b2] transition-colors">
+                      {cc.company.name}
+                    </Link>
                     {cc.isPrimary && (
                       <span className="text-xs bg-[#0891b2]/10 text-[#0891b2] px-1.5 py-0.5 rounded">
                         Primary
                       </span>
                     )}
+                    <RemoveAssociationButton
+                      removeAction={async () => {
+                        "use server";
+                        return removeContactFromCompany(contact.id, cc.companyId);
+                      }}
+                    />
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Actions Card */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">

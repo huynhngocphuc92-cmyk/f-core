@@ -19,6 +19,15 @@ import {
 } from "lucide-react";
 import DeleteButton from "@/components/crm/DeleteButton";
 import ActivityForm from "@/components/crm/ActivityForm";
+import AssociationPicker, { RemoveAssociationButton } from "@/components/crm/AssociationPicker";
+import {
+  searchContacts,
+  searchCompanies,
+  addContactToDeal,
+  removeContactFromDeal,
+  addCompanyToDeal,
+  removeCompanyFromDeal,
+} from "@/app/actions/crm";
 
 export const dynamic = "force-dynamic";
 
@@ -530,9 +539,20 @@ export default async function DealDetailPage({
 
           {/* Associated Contacts */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">
-              Contacts ({deal.contacts.length})
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                Contacts ({deal.contacts.length})
+              </h3>
+              <AssociationPicker
+                associationType="contact"
+                existingIds={deal.contacts.map((dc) => dc.contactId)}
+                searchAction={searchContacts}
+                addAction={async (contactId: string) => {
+                  "use server";
+                  return addContactToDeal(deal.id, contactId);
+                }}
+              />
+            </div>
             {deal.contacts.length === 0 ? (
               <p className="text-sm text-gray-500">No contacts associated</p>
             ) : (
@@ -553,7 +573,7 @@ export default async function DealDetailPage({
                     <Link
                       key={dc.contactId}
                       href={`/contacts/${dc.contactId}`}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors group"
                     >
                       <div className="w-8 h-8 rounded-full bg-[#0891b2] flex items-center justify-center text-white text-xs font-medium">
                         {initials}
@@ -566,6 +586,12 @@ export default async function DealDetailPage({
                           <p className="text-xs text-gray-500">{dc.role}</p>
                         )}
                       </div>
+                      <RemoveAssociationButton
+                        removeAction={async () => {
+                          "use server";
+                          return removeContactFromDeal(deal.id, dc.contactId);
+                        }}
+                      />
                     </Link>
                   );
                 })}
@@ -575,9 +601,20 @@ export default async function DealDetailPage({
 
           {/* Associated Companies */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">
-              Companies ({deal.companies.length})
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                Companies ({deal.companies.length})
+              </h3>
+              <AssociationPicker
+                associationType="company"
+                existingIds={deal.companies.map((dc) => dc.companyId)}
+                searchAction={searchCompanies}
+                addAction={async (companyId: string) => {
+                  "use server";
+                  return addCompanyToDeal(deal.id, companyId);
+                }}
+              />
+            </div>
             {deal.companies.length === 0 ? (
               <p className="text-sm text-gray-500">No companies associated</p>
             ) : (
@@ -586,7 +623,7 @@ export default async function DealDetailPage({
                   <Link
                     key={dc.companyId}
                     href={`/companies/${dc.companyId}`}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors group"
                   >
                     <div className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 text-xs font-medium">
                       {dc.company.name?.charAt(0) || "?"}
@@ -602,10 +639,16 @@ export default async function DealDetailPage({
                       )}
                     </div>
                     {dc.isPrimary && (
-                      <span className="text-xs bg-[#0891b2]/10 text-[#0891b2] px-1.5 py-0.5 rounded ml-auto">
+                      <span className="text-xs bg-[#0891b2]/10 text-[#0891b2] px-1.5 py-0.5 rounded">
                         Primary
                       </span>
                     )}
+                    <RemoveAssociationButton
+                      removeAction={async () => {
+                        "use server";
+                        return removeCompanyFromDeal(deal.id, dc.companyId);
+                      }}
+                    />
                   </Link>
                 ))}
               </div>

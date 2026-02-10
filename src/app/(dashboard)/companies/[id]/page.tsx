@@ -20,6 +20,15 @@ import {
 } from "lucide-react";
 import DeleteButton from "@/components/crm/DeleteButton";
 import ActivityForm from "@/components/crm/ActivityForm";
+import AssociationPicker, { RemoveAssociationButton } from "@/components/crm/AssociationPicker";
+import {
+  searchContacts,
+  searchDeals,
+  addContactToCompany,
+  removeContactFromCompany,
+  addCompanyToDeal,
+  removeCompanyFromDeal,
+} from "@/app/actions/crm";
 
 export const dynamic = "force-dynamic";
 
@@ -394,9 +403,20 @@ export default async function CompanyDetailPage({
 
           {/* Associated Contacts */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">
-              Contacts ({company.contacts.length})
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                Contacts ({company.contacts.length})
+              </h3>
+              <AssociationPicker
+                associationType="contact"
+                existingIds={company.contacts.map((cc) => cc.contactId)}
+                searchAction={searchContacts}
+                addAction={async (contactId: string) => {
+                  "use server";
+                  return addContactToCompany(contactId, company.id);
+                }}
+              />
+            </div>
             {company.contacts.length === 0 ? (
               <p className="text-sm text-gray-500">No contacts associated</p>
             ) : (
@@ -417,7 +437,7 @@ export default async function CompanyDetailPage({
                     <Link
                       key={cc.contactId}
                       href={`/contacts/${cc.contactId}`}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors group"
                     >
                       <div className="w-8 h-8 rounded-full bg-[#0891b2] flex items-center justify-center text-white text-xs font-medium">
                         {initials}
@@ -432,6 +452,12 @@ export default async function CompanyDetailPage({
                           </p>
                         )}
                       </div>
+                      <RemoveAssociationButton
+                        removeAction={async () => {
+                          "use server";
+                          return removeContactFromCompany(cc.contactId, company.id);
+                        }}
+                      />
                     </Link>
                   );
                 })}
@@ -441,9 +467,20 @@ export default async function CompanyDetailPage({
 
           {/* Associated Deals */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">
-              Deals ({company.deals.length})
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                Deals ({company.deals.length})
+              </h3>
+              <AssociationPicker
+                associationType="deal"
+                existingIds={company.deals.map((dc) => dc.dealId)}
+                searchAction={searchDeals}
+                addAction={async (dealId: string) => {
+                  "use server";
+                  return addCompanyToDeal(dealId, company.id);
+                }}
+              />
+            </div>
             {company.deals.length === 0 ? (
               <p className="text-sm text-gray-500">No deals associated</p>
             ) : (
@@ -452,7 +489,7 @@ export default async function CompanyDetailPage({
                   <Link
                     key={dc.dealId}
                     href={`/deals/${dc.dealId}`}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors group"
                   >
                     <CircleDollarSign className="w-5 h-5 text-[#0891b2] shrink-0" />
                     <div className="min-w-0">
@@ -482,6 +519,12 @@ export default async function CompanyDetailPage({
                         )}
                       </div>
                     </div>
+                    <RemoveAssociationButton
+                      removeAction={async () => {
+                        "use server";
+                        return removeCompanyFromDeal(dc.dealId, company.id);
+                      }}
+                    />
                   </Link>
                 ))}
               </div>
