@@ -8,19 +8,40 @@
 - This rule exists to prevent context limit issues
 - Use text-based descriptions instead of visual references
 
-### 2. MCP Servers Configured (7 servers)
+### 2. MCP Servers Configured (18 servers)
 
-| Server | Chức năng | Status |
-|--------|-----------|--------|
-| `hubspot-db` | PostgreSQL database queries | ✅ Active |
-| `filesystem` | File operations trong project | ✅ Active |
-| `github` | GitHub API (PR, issues) | ✅ Active |
-| `tavily` | Web search, research | ✅ Active |
-| `memory` | Persistent memory across sessions | ✅ Active |
-| `sequential-thinking` | Complex reasoning | ✅ Active |
-| `fetch` | HTTP requests | ✅ Active |
+#### Group A: Core (trong `.mcp.json`)
+| # | Server | Chức năng | Status |
+|---|--------|-----------|--------|
+| 1 | `hubspot-db` | PostgreSQL database queries | ✅ Active |
+| 2 | `filesystem` | File operations trong project | ✅ Active |
+| 3 | `github` | GitHub API (PR, issues) | ✅ Active |
+| 4 | `tavily` | Web search, research, crawl | ✅ Active |
+| 5 | `memory` | Persistent knowledge graph | ✅ Active |
+| 6 | `sequential-thinking` | Complex reasoning (instance 1) | ✅ Active |
+| 7 | `fetch` | HTTP requests (uvx) | ✅ Active |
+| 8 | `antv-chart` | Chart & data visualization | ✅ Active |
+| 9 | `exa` | Exa AI web search & code context | ✅ Active |
+| 10 | `stripe` | Stripe payments (test mode) | ✅ Active |
+| 11 | `upstash` | Upstash Redis & QStash | ✅ Active |
 
-**Config file:** `~/.mcp.json` và `/Users/chong/hubspot-demo/.mcp.json`
+#### Group B: Extended (trong Claude Code local config)
+| # | Server | Chức năng | Status |
+|---|--------|-----------|--------|
+| 12 | `supabase` | Supabase project management & SQL | ⚠️ Partial |
+| 13 | `figma-mcp` | Figma design files & comments | ✅ Active |
+| 14 | `browser-use` | Cloud browser automation (HTTP) | ✅ Active |
+| 15 | `apify` | Web scraping (RAG browser) | ✅ Active |
+| 16 | `ui-ux` | UI/UX design system search | ✅ Active |
+| 17 | `git` | Git operations (status, diff, commit) | ✅ Active |
+| 18 | `thinking` | Complex reasoning (instance 2) | ✅ Active |
+
+#### Known Issues
+- **`supabase`** (⚠️): Tools có parameter riêng hoạt động OK (`search_docs`, `execute_sql`, `list_tables`, `apply_migration`). Tools không có parameter (`list_projects`, `list_organizations`) bị lỗi do Claude Code inject `reason` param mà Supabase Zod strict reject. Chờ Supabase MCP update fix.
+
+**Config files:**
+- `.mcp.json` (project root) - Group A
+- `~/.claude.json` (Claude Code local) - Group B
 **GitHub account:** huynhngocphuc92-cmyk
 
 ### 3. Plugins Installed (2 plugins)
@@ -42,31 +63,42 @@
 ### Phase 1: Research & Planning
 | Task | MCP to use |
 |------|------------|
-| Tìm hiểu requirements | `tavily` + `sequential-thinking` |
-| Research UI/UX patterns | `tavily` + `fetch` |
+| Tìm hiểu requirements | `tavily` + `exa` + `sequential-thinking` |
+| Research UI/UX patterns | `tavily` + `ui-ux` + `fetch` |
 | Lưu context quan trọng | `memory` |
+| Web scraping & data extraction | `apify` |
+| Company/competitor research | `exa` (company_research) |
 
 ### Phase 2: Design & Architecture
 | Task | MCP to use |
 |------|------------|
-| Lên kế hoạch phức tạp | `sequential-thinking` |
-| Thiết kế database schema | `hubspot-db` |
+| Lên kế hoạch phức tạp | `sequential-thinking` + `thinking` |
+| Thiết kế database schema | `hubspot-db` + `supabase` |
 | Quản lý files | `filesystem` |
+| Design system & UI tokens | `ui-ux` |
+| Figma design review | `figma-mcp` |
+| Data visualization | `antv-chart` |
 
 ### Phase 3: Development
 | Task | MCP to use |
 |------|------------|
 | Database queries | `hubspot-db` |
+| Supabase migrations & SQL | `supabase` |
 | File operations | `filesystem` |
 | Fetch external APIs | `fetch` |
 | Store knowledge | `memory` |
+| Git operations | `git` |
+| Payment integration | `stripe` |
+| Redis caching/queues | `upstash` |
 
 ### Phase 4: Testing & Deployment
 | Task | MCP to use |
 |------|------------|
 | Check data integrity | `hubspot-db` |
 | Create PR/issues | `github` |
-| Debug complex issues | `sequential-thinking` |
+| Debug complex issues | `sequential-thinking` + `thinking` |
+| Browser E2E testing | `browser-use` |
+| Git status/diff/commit | `git` |
 
 ---
 
@@ -74,7 +106,7 @@
 
 ### 1. Research & Document
 ```
-tavily (search) → sequential-thinking (analyze) → memory (store) → implement
+tavily/exa (search) → sequential-thinking (analyze) → memory (store) → implement
 ```
 
 ### 2. Build feature mới
@@ -92,16 +124,91 @@ hubspot-db (query) → sequential-thinking (analyze) → filesystem (fix) → hu
 fetch (API call) → sequential-thinking (process) → hubspot-db (store) → memory (cache)
 ```
 
+### 5. Design → Code pipeline
+```
+figma-mcp (review) → ui-ux (design tokens) → filesystem (implement) → browser-use (test)
+```
+
+### 6. Payment integration
+```
+stripe (setup products/prices) → hubspot-db (store refs) → filesystem (code) → stripe (verify)
+```
+
+### 7. Data visualization
+```
+hubspot-db (query data) → antv-chart (generate chart) → filesystem (embed)
+```
+
+### 8. Web scraping & analysis
+```
+apify (scrape) → sequential-thinking (analyze) → memory (store insights)
+```
+
 ---
 
-### 4. Skills Available
-- `apify-ultimate-scraper`: Web scraping
-- `browser-use`: Browser automation
-- `implement-design`: Design implementation
-- `research`: Research tasks
-- `ux-researcher-designer`: UX research and design
-- `tailwind-design-system`: Build scalable design systems
-- `vercel-react-best-practices`: React/Next.js performance optimization
+### 4. Skills Available (from everything-claude-code + built-in)
+
+#### Development Skills
+| Skill | Chức năng |
+|-------|-----------|
+| `coding-standards` | Coding standards cho TypeScript/React/Node.js |
+| `backend-patterns` | Backend architecture, API design, DB optimization |
+| `frontend-patterns` | React/Next.js patterns, state management |
+| `postgres-patterns` | PostgreSQL query optimization, schema design |
+| `security-review` | Security checklist, auth, OWASP patterns |
+| `tdd-workflow` | Test-driven development, 80%+ coverage |
+| `verification-loop` | Code verification & validation |
+| `continuous-learning` | Auto-extract reusable patterns |
+| `strategic-compact` | Smart context compaction |
+
+#### Design & Research Skills
+| Skill | Chức năng |
+|-------|-----------|
+| `implement-design` | Figma → production code |
+| `ux-researcher-designer` | UX research, personas, journey maps |
+| `tailwind-design-system` | Tailwind CSS design systems |
+| `research` | AI-synthesized research with citations |
+
+#### Automation Skills
+| Skill | Chức năng |
+|-------|-----------|
+| `apify-ultimate-scraper` | Web scraping any platform |
+| `browser-use` | Browser automation & testing |
+
+#### Slash Commands (from everything-claude-code)
+| Command | Chức năng |
+|---------|-----------|
+| `/plan` | Restate requirements, create step-by-step plan |
+| `/tdd` | Test-driven development workflow |
+| `/code-review` | Comprehensive code review |
+| `/build-fix` | Build and fix errors |
+| `/verify` | Verify implementation |
+| `/e2e` | Generate & run E2E tests (Playwright) |
+| `/checkpoint` | Save checkpoint |
+| `/learn` | Extract reusable patterns |
+| `/refactor-clean` | Refactor & clean code |
+| `/test-coverage` | Check & improve test coverage |
+| `/update-docs` | Update documentation |
+
+### 5. Agents Available (from everything-claude-code)
+| Agent | Chức năng |
+|-------|-----------|
+| `architect` | System architecture design |
+| `planner` | Task planning & decomposition |
+| `code-reviewer` | Deep code review |
+| `security-reviewer` | Security audit |
+| `database-reviewer` | Database review |
+| `tdd-guide` | TDD guidance |
+| `e2e-runner` | E2E test runner |
+| `build-error-resolver` | Build error fixing |
+| `refactor-cleaner` | Code refactoring |
+| `doc-updater` | Documentation updates |
+
+### 6. Additional Tools Installed
+| Tool | Version | Chức năng |
+|------|---------|-----------|
+| `taskmaster-ai` | MCP Server | AI task management from PRDs, 36 tools |
+| `beads` (bd) | v0.49.6 | Git-backed issue tracker with SessionStart/PreCompact hooks |
 
 ## Project Structure
 - **Framework:** Next.js 16 with TypeScript
@@ -153,6 +260,25 @@ cat docs/DEVELOPMENT_STRATEGY.md
 | Write PRD | `/product-management:write-spec` |
 | Plan roadmap | `/product-management:roadmap-update` |
 | Sales prep | `/sales:call-prep` |
+| Tailwind design system | `/tailwind-design-system` |
+| React best practices | `/vercel-react-best-practices` |
+
+## MCP QUICK REFERENCE
+
+| Cần làm gì | MCP + Tool |
+|------------|-----------|
+| Query PostgreSQL | `hubspot-db` → `query` |
+| Search web | `tavily` → `tavily_search` / `exa` → `web_search_exa` |
+| Tạo chart | `antv-chart` → `generate_*_chart` |
+| Git operations | `git` → `git_status`, `git_diff`, `git_commit` |
+| Stripe payments | `stripe` → `create_product`, `create_price`, `create_payment_link` |
+| Redis cache | `upstash` → `redis_database_run_redis_commands` |
+| Supabase SQL | `supabase` → `execute_sql`, `apply_migration` |
+| Figma designs | `figma-mcp` → `add_figma_file`, `view_node` |
+| Browser automation | `browser-use` → `browser_task` |
+| UI/UX patterns | `ui-ux` → `search_all`, `get_design_system` |
+| Web scraping | `apify` → `search` |
+| Save knowledge | `memory` → `create_entities`, `search_nodes` |
 
 ---
 
