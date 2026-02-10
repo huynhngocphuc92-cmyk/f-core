@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import {
   CircleDollarSign,
   Plus,
@@ -90,7 +91,7 @@ function DealCard({ deal }: { deal: Deal }) {
   const priority = getPriorityStyles(deal.priority);
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer">
+    <Link href={`/deals/${deal.id}`} className="block bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer">
       <h4 className="text-sm font-semibold text-gray-900 truncate mb-2">
         {deal.name}
       </h4>
@@ -127,7 +128,7 @@ function DealCard({ deal }: { deal: Deal }) {
           {priority.label}
         </span>
       )}
-    </div>
+    </Link>
   );
 }
 
@@ -303,9 +304,9 @@ export default function DealsBoard({ deals }: { deals: Deal[] }) {
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
                   >
                     <td className="px-4 py-3">
-                      <span className="text-sm font-medium text-gray-900">
+                      <Link href={`/deals/${deal.id}`} className="text-sm font-medium text-gray-900 hover:text-[#0891b2]">
                         {deal.name}
-                      </span>
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {formatCurrency(deal.amount, deal.currency)}
