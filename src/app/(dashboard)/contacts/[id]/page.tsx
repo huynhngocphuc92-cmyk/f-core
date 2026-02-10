@@ -88,31 +88,38 @@ export default async function ContactDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const decodedId = decodeURIComponent(id);
 
-  const contact = await prisma.contact.findFirst({
-    where: { id, deletedAt: null },
-    include: {
-      owner: {
-        select: { id: true, name: true, email: true },
-      },
-      activities: {
-        orderBy: { createdAt: "desc" },
-        take: 20,
-        include: {
-          owner: {
-            select: { name: true },
+  let contact;
+  try {
+    contact = await prisma.contact.findFirst({
+      where: { id: decodedId, deletedAt: null },
+      include: {
+        owner: {
+          select: { id: true, name: true, email: true },
+        },
+        activities: {
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          include: {
+            owner: {
+              select: { name: true },
+            },
+          },
+        },
+        companies: {
+          include: {
+            company: {
+              select: { id: true, name: true, domain: true },
+            },
           },
         },
       },
-      companies: {
-        include: {
-          company: {
-            select: { id: true, name: true, domain: true },
-          },
-        },
-      },
-    },
-  });
+    });
+  } catch (error) {
+    console.error("Contact detail query error:", error);
+    notFound();
+  }
 
   if (!contact) {
     notFound();
