@@ -1,23 +1,40 @@
-import { Plus, Search, Filter, Download, MoreHorizontal } from "lucide-react";
+import { Plus, Filter, Download, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import prisma from "@/lib/prisma";
+import SearchInput from "@/components/crm/SearchInput";
+import { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-async function getContacts() {
-  const contacts = await prisma.contact.findMany({
-    where: { deletedAt: null },
+async function getContacts(search?: string) {
+  const where: Prisma.ContactWhereInput = { deletedAt: null };
+
+  if (search) {
+    where.OR = [
+      { firstName: { contains: search, mode: "insensitive" } },
+      { lastName: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } },
+      { phone: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  return prisma.contact.findMany({
+    where,
     include: {
       owner: { select: { name: true, email: true } },
     },
     orderBy: { createdAt: "desc" },
     take: 50,
   });
-  return contacts;
 }
 
-export default async function ContactsPage() {
-  const contacts = await getContacts();
+export default async function ContactsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string }>;
+}) {
+  const { search } = await searchParams;
+  const contacts = await getContacts(search);
 
   return (
     <div className="p-6 pt-8">
@@ -44,14 +61,7 @@ export default async function ContactsPage() {
 
       {/* Filters Bar */}
       <div className="flex items-center gap-4 mb-6">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search contacts..."
-            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2]"
-          />
-        </div>
+        <SearchInput placeholder="Search contacts..." />
         <button className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
           <Filter className="w-4 h-4" />
           Filters
@@ -151,14 +161,18 @@ export default async function ContactsPage() {
 
         {contacts.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500">No contacts found</p>
-            <Link
-              href="/contacts/new"
-              className="inline-flex items-center gap-2 mt-4 text-[#0891b2] hover:text-[#0ea5e9]"
-            >
-              <Plus className="w-4 h-4" />
-              Create your first contact
-            </Link>
+            <p className="text-gray-500">
+              {search ? `No contacts matching "${search}"` : "No contacts found"}
+            </p>
+            {!search && (
+              <Link
+                href="/contacts/new"
+                className="inline-flex items-center gap-2 mt-4 text-[#0891b2] hover:text-[#0ea5e9]"
+              >
+                <Plus className="w-4 h-4" />
+                Create your first contact
+              </Link>
+            )}
           </div>
         )}
       </div>
