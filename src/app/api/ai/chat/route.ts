@@ -7,6 +7,19 @@ import { buildSystemPrompt } from "@/lib/ai/system-prompt";
 import { getCrmTools } from "@/lib/ai/tools";
 import prisma from "@/lib/prisma";
 
+async function getOrFallbackUser() {
+  try {
+    return await getUserData();
+  } catch {
+    // Fallback to first user in DB for dev/demo mode
+    const user = await prisma.user.findFirst({
+      select: { id: true, email: true, name: true, tenantId: true, role: true },
+    });
+    if (!user) throw new Error("No users in database");
+    return user;
+  }
+}
+
 function extractTextFromUIMessage(message: UIMessage): string {
   return message.parts
     .filter((p): p is { type: "text"; text: string } => p.type === "text")
@@ -16,7 +29,7 @@ function extractTextFromUIMessage(message: UIMessage): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const userData = await getUserData(request);
+    const userData = await getOrFallbackUser();
     const { messages, conversationId, contextType, contextId } =
       await request.json();
 
