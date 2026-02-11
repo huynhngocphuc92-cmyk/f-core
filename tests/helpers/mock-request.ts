@@ -31,7 +31,7 @@ export function createMockRequest(
     init.body = JSON.stringify(options.body);
   }
 
-  return new NextRequest(urlObj, init);
+  return new NextRequest(urlObj, init as RequestInit & { signal?: AbortSignal });
 }
 
 /**
