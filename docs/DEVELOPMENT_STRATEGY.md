@@ -1,593 +1,752 @@
 # F-CORE Development Strategy
-> Version: 2.0
+> Version: 3.0
 > Last Updated: 2026-02-11
-> Purpose: Kế hoạch sử dụng toàn bộ 18 MCP + 10 Plugins + 50+ Skills + 15+ Agents
+> Purpose: Ke hoach su dung toan bo 18 MCP + 10 Plugins + 50+ Skills + 15+ Agents
+> Status: API Routes 100% done (498 tests) → Chuyen sang Phase B: Advanced Features
 
 ---
 
-## I. TỔNG QUAN HIỆN TRẠNG
+## I. TONG QUAN HIEN TRANG
 
-### Tiến độ: ~80% hoàn thành
+### Tien do: ~85% hoan thanh
 
-| Hạng mục | Số lượng | Status |
+| Hang muc | So luong | Status |
 |----------|---------|--------|
 | Database tables (Prisma) | 33 models | ✅ Done |
 | Dashboard pages | 55 pages | ✅ Done |
 | Server Actions | 16 files | ✅ Done |
-| API Routes | 29 files | ⚠️ Partial |
+| API Routes | 44 files | ✅ Done |
 | Components | 100+ | ✅ Done |
+| Unit Tests | 498 tests / 58 files | ✅ Done |
+| AI Assistant | 0 | ❌ Chua bat dau |
+| E2E Tests | 0 | ❌ Chua bat dau |
+| Stripe Integration | 0 | ❌ Chua bat dau |
+| Redis Caching | 0 | ❌ Chua bat dau |
 
-### Còn thiếu (~20%): API Routes
+### Con thieu (~15%): Advanced Features
 
-| Priority | Module | Có UI | Có Actions | Thiếu API |
-|----------|--------|-------|------------|-----------|
-| P0 | Pipelines & Stages | ✅ | ✅ | ❌ |
-| P1 | Properties, Emails, Meetings | ✅ | ✅ | ❌ |
-| P2 | Tickets, Workflows, Email Marketing, Sequences, Quotes, Notifications | ✅ | ✅ | ❌ |
-| P3 | Landing Pages, Chat, Webhooks | ✅ | ✅ | ❌ |
+| Priority | Feature | Tools Chinh |
+|----------|---------|-------------|
+| P0 | **AI Assistant (Copilot)** | Vercel AI SDK, OpenAI |
+| P1 | Stripe Integration (Quotes/Billing) | `stripe` MCP |
+| P1 | Redis Caching & Rate Limiting | `upstash` MCP |
+| P2 | E2E Testing | `browser-use` MCP, Playwright |
+| P2 | Interactive Charts | `antv-chart` MCP |
+| P3 | Performance Optimization | Lighthouse, React profiling |
+| P3 | Security Hardening | `security-reviewer` agent |
+| P3 | Mobile Responsiveness | `ui-ux` MCP |
 
 ---
 
-## II. TOÀN BỘ CÔNG CỤ (88 tools)
+## II. TOAN BO CONG CU (88 tools) - MAPPING VAO CONG VIEC
 
-### A. 18 MCP Servers
+### ═══════════════════════════════════════
+### A. 18 MCP SERVERS
+### ═══════════════════════════════════════
 
-| # | Server | Vai trò trong F-CORE | Pipeline |
-|---|--------|---------------------|----------|
-| 1 | `hubspot-db` | Query PostgreSQL, kiểm tra data, debug | P1, P3 |
-| 2 | `filesystem` | Đọc/ghi code files | P1 |
-| 3 | `github` | PR, issues, code review, releases | P5, P6 |
-| 4 | `tavily` | Research features, best practices | P2, P4 |
-| 5 | `memory` | Lưu context, decisions, patterns | P6 |
-| 6 | `sequential-thinking` | Phân tích phức tạp, architecture | P1 |
-| 7 | `fetch` | Gọi external APIs, test endpoints | P1, P4 |
-| 8 | `antv-chart` | Tạo charts cho Reports module | P3 |
-| 9 | `exa` | AI search, code context, company research | P2, P4 |
-| 10 | `stripe` | Payment links, invoices, subscriptions | P4 |
-| 11 | `upstash` | Redis caching, rate limiting, queues | P1, P4 |
-| 12 | `supabase` | Migrations, SQL, edge functions | P1, P3 |
-| 13 | `figma-mcp` | Review Figma designs, extract specs | P2 |
-| 14 | `browser-use` | E2E testing, browser automation | P5 |
-| 15 | `apify` | Scrape UI patterns từ competitors | P2 |
-| 16 | `ui-ux` | Design tokens, UI patterns, guidelines | P2 |
-| 17 | `git` | Status, diff, commit, branch | P5, P6 |
-| 18 | `thinking` | Deep reasoning instance #2 | P1 |
+#### Group 1: DATABASE & BACKEND (Moi ngay)
 
-### B. 10 Plugins → 50+ Slash Commands
+| # | MCP | Cong viec cu the | Vi du |
+|---|-----|-----------------|-------|
+| 1 | `hubspot-db` | Query data, debug, verify | `SELECT * FROM contacts WHERE tenant_id = 'x'` |
+| 2 | `supabase` | Migrations, edge functions, SQL | `apply_migration`, `execute_sql` |
+| 3 | `filesystem` | Doc/ghi code | Read/write src/ files |
 
-#### Repo 1: `knowledge-work-plugins` (5 plugins)
+**Khi nao dung:**
+```
+hubspot-db → Khi can kiem tra data thuc, debug query, EXPLAIN ANALYZE
+supabase   → Khi tao migration moi (AI tables), deploy edge functions
+filesystem → Moi khi code (tu dong)
+```
 
-**1. sales** — Thiết kế Sales Hub features
-| Command | Áp dụng cho F-CORE |
-|---------|-------------------|
-| `/sales:account-research` | Research khách hàng mẫu cho demo data |
-| `/sales:call-prep` | Template cho Meeting Scheduler feature |
-| `/sales:pipeline-review` | Thiết kế Deal Pipeline analytics |
-| `/sales:forecast` | Mô hình dự báo doanh thu cho Reports |
-| `/sales:draft-outreach` | Template cho Email Sequences |
-| `/sales:daily-briefing` | Dashboard Sales Daily view |
-| `/sales:competitive-intelligence` | So sánh F-CORE vs HubSpot |
-| `/sales:create-an-asset` | Tạo sales materials, landing pages |
+#### Group 2: AI & RESEARCH (Feature moi)
 
-**2. product-management** — Planning & PRD
-| Command | Áp dụng cho F-CORE |
-|---------|-------------------|
-| `/product-management:feature-spec` | Viết PRD cho mỗi module mới |
-| `/product-management:roadmap-management` | Quản lý Sprint roadmap |
-| `/product-management:stakeholder-comms` | Viết status updates |
-| `/product-management:metrics-tracking` | Định nghĩa KPIs cho CRM |
-| `/product-management:user-research-synthesis` | Phân tích user feedback |
-| `/product-management:competitive-analysis` | So sánh features vs HubSpot |
+| # | MCP | Cong viec cu the | Vi du |
+|---|-----|-----------------|-------|
+| 4 | `tavily` | Search web, research features | `tavily_search("HubSpot ChatSpot features")` |
+| 5 | `exa` | Code context, company research | `get_code_context("Vercel AI SDK useChat")` |
+| 6 | `fetch` | Goi API, test endpoints | `fetch("https://api.openai.com/v1/models")` |
+| 7 | `apify` | Scrape UI patterns | `search("hubspot.com CRM dashboard")` |
 
-**3. customer-support** — Thiết kế Service Hub
-| Command | Áp dụng cho F-CORE |
-|---------|-------------------|
-| `/customer-support:ticket-triage` | Logic phân loại tickets |
-| `/customer-support:response-drafting` | Template responses cho chat |
-| `/customer-support:escalation` | Workflow escalation rules |
-| `/customer-support:knowledge-management` | Knowledge Base structure |
-| `/customer-support:customer-research` | Search across KB articles |
+**Khi nao dung:**
+```
+tavily → Research truoc khi build feature moi
+exa    → Tim code examples, SDK docs
+fetch  → Test API endpoints, webhook delivery
+apify  → Clone UI patterns tu competitors
+```
 
-**4. marketing** — Thiết kế Marketing Hub
-| Command | Áp dụng cho F-CORE |
-|---------|-------------------|
-| `/marketing:campaign-planning` | Campaign management feature |
-| `/marketing:content-creation` | Email template builder |
-| `/marketing:seo-audit` | SEO features cho Landing Pages |
-| `/marketing:brand-voice` | Brand consistency cho CMS |
-| `/marketing:competitive-analysis` | Marketing feature comparison |
-| `/marketing:performance-analytics` | Marketing reports & dashboards |
-| `/marketing:email-sequence` | Email drip campaigns |
+#### Group 3: TICH HOP BEN NGOAI (Advanced Features)
 
-**5. data** — Analytics & Reporting
-| Command | Áp dụng cho F-CORE |
-|---------|-------------------|
-| `/data:analyze` | Phân tích CRM data patterns |
-| `/data:build-dashboard` | Interactive HTML dashboards |
-| `/data:create-viz` | Charts cho Reports module |
-| `/data:explore-data` | Profile database tables |
-| `/data:validate` | QA trước khi ship analytics |
-| `/data:sql-queries` | Optimize complex CRM queries |
-| `/data:statistical-analysis` | Trend analysis cho forecasting |
+| # | MCP | Cong viec cu the | Vi du |
+|---|-----|-----------------|-------|
+| 8 | `stripe` | Quotes, invoices, payments | `create_product`, `create_payment_link` |
+| 9 | `upstash` | Redis cache, rate limit, queues | `redis_database_run_redis_commands` |
+| 10 | `antv-chart` | Charts cho Reports | `generate_funnel_chart`, `generate_line_chart` |
 
-#### Repo 2: `claude-plugins-official` (5 plugins)
+**Workflow cu the:**
+```
+STRIPE (Quotes module):
+  stripe.create_product → stripe.create_price → stripe.create_payment_link
+  → hubspot-db (store refs) → UI (show payment link)
 
-**6. code-review** — Code quality
-| Agent | Khi nào dùng |
-|-------|-------------|
-| `code-review:code-review` | Sau mỗi PR, trước merge |
+UPSTASH (Caching):
+  API request → upstash.redis GET cache → if miss → hubspot-db query
+  → upstash.redis SET cache → return response
 
-**7. feature-dev** — Feature development
-| Agent | Khi nào dùng |
-|-------|-------------|
-| `feature-dev:code-architect` | Thiết kế architecture cho feature mới |
-| `feature-dev:code-explorer` | Phân tích codebase patterns |
+ANTV (Reports):
+  hubspot-db (aggregate query) → antv-chart.generate_* → embed in dashboard
+```
+
+#### Group 4: THIET KE & UI
+
+| # | MCP | Cong viec cu the | Vi du |
+|---|-----|-----------------|-------|
+| 11 | `ui-ux` | Design tokens, patterns, guidelines | `search_all("chat interface dark")` |
+| 12 | `figma-mcp` | Review Figma designs | `add_figma_file`, `view_node` |
+
+**Khi nao dung:**
+```
+ui-ux     → Truoc khi code UI moi (tim patterns, colors, typography)
+figma-mcp → Khi co Figma file can convert sang code
+```
+
+#### Group 5: REASONING & MEMORY
+
+| # | MCP | Cong viec cu the | Vi du |
+|---|-----|-----------------|-------|
+| 13 | `sequential-thinking` | Phan tich phuc tap | Architecture decisions, debug |
+| 14 | `thinking` | Deep reasoning #2 | Complex multi-step problems |
+| 15 | `memory` | Luu context across sessions | `create_entities`, `search_nodes` |
+
+**Khi nao dung:**
+```
+sequential-thinking → Thiet ke AI tool calling, complex business logic
+thinking            → Debug issues phuc tap, architectural trade-offs
+memory              → Luu architecture decisions, patterns da hoc
+```
+
+#### Group 6: DEVOPS & TESTING
+
+| # | MCP | Cong viec cu the | Vi du |
+|---|-----|-----------------|-------|
+| 16 | `git` | Status, diff, commit, branch | `git_status`, `git_commit` |
+| 17 | `github` | PR, issues, releases | `create_pull_request`, `list_issues` |
+| 18 | `browser-use` | E2E testing, browser automation | `browser_task("test login flow")` |
+
+**Khi nao dung:**
+```
+git        → Moi khi commit (tu dong qua hooks)
+github     → Tao PR, review, manage releases
+browser-use → E2E testing critical user flows
+```
+
+---
+
+### ═══════════════════════════════════════
+### B. 10 PLUGINS → 50+ SLASH COMMANDS
+### ═══════════════════════════════════════
+
+#### HOW TO USE: Moi plugin map vao 1 "vai tro" trong du an
+
+---
+
+#### Plugin 1: `sales` → THIET KE SALES HUB
+
+**Ap dung cho AI Assistant:**
+| Command | Ap dung |
+|---------|---------|
+| `/sales:pipeline-review` | Thiet ke AI tool `pipeline_summary` |
+| `/sales:forecast` | Thiet ke AI tool `revenue_forecast` |
+| `/sales:draft-outreach` | Thiet ke AI tool `draft_email` |
+| `/sales:call-prep` | Template cho AI meeting prep feature |
+| `/sales:daily-briefing` | AI daily summary feature |
+| `/sales:account-research` | AI tool `get_contact` context enrichment |
+
+**Vi du thuc te:**
+```bash
+# Khi build AI tool "pipeline_summary":
+/sales:pipeline-review
+# → Hieu cach analyze pipeline → Code AI tool tuong tu
+```
+
+---
+
+#### Plugin 2: `product-management` → PLANNING & PRD
+
+| Command | Khi nao dung |
+|---------|-------------|
+| `/product-management:feature-spec` | Viet PRD truoc moi feature lon |
+| `/product-management:roadmap-management` | Cap nhat roadmap moi sprint |
+| `/product-management:competitive-analysis` | So sanh F-CORE vs HubSpot |
+| `/product-management:metrics-tracking` | Dinh nghia KPIs cho CRM |
+| `/product-management:stakeholder-comms` | Viet status updates |
+
+**Vi du thuc te:**
+```bash
+# Truoc khi build AI Assistant:
+/product-management:feature-spec "AI Assistant for CRM"
+# → PRD chi tiet → Lam input cho /plan
+```
+
+---
+
+#### Plugin 3: `customer-support` → SERVICE HUB FEATURES
+
+| Command | Ap dung |
+|---------|---------|
+| `/customer-support:ticket-triage` | Logic AI tool phan loai tickets |
+| `/customer-support:response-drafting` | AI auto-draft ticket responses |
+| `/customer-support:knowledge-management` | AI tool search KB articles |
+| `/customer-support:escalation` | Workflow escalation logic |
+
+**Vi du thuc te:**
+```bash
+# Khi build AI tool "search_kb":
+/customer-support:knowledge-management
+# → Hieu cach structure KB → Code AI tool search
+```
+
+---
+
+#### Plugin 4: `marketing` → MARKETING HUB FEATURES
+
+| Command | Ap dung |
+|---------|---------|
+| `/marketing:campaign-planning` | AI tool campaign analysis |
+| `/marketing:email-sequence` | AI tool draft email sequences |
+| `/marketing:seo-audit` | AI tool analyze landing pages |
+| `/marketing:content-creation` | AI tool draft marketing content |
+| `/marketing:performance-analytics` | Reports dashboard design |
+
+---
+
+#### Plugin 5: `data` → ANALYTICS & REPORTING
+
+| Command | Ap dung | MCP kem theo |
+|---------|---------|-------------|
+| `/data:explore-data` | Profile CRM data tables | `hubspot-db` |
+| `/data:analyze` | Phan tich CRM data patterns | `hubspot-db` |
+| `/data:build-dashboard` | Interactive HTML dashboards | `antv-chart` |
+| `/data:create-viz` | Charts cho Reports module | `antv-chart` |
+| `/data:sql-queries` | Optimize complex CRM queries | `hubspot-db` |
+| `/data:validate` | QA truoc khi ship analytics | `hubspot-db` |
+| `/data:statistical-analysis` | Trend analysis cho forecasting | `hubspot-db` |
+
+**Vi du thuc te:**
+```bash
+# Build Revenue Dashboard:
+/data:explore-data    # Profile deals table
+# → hubspot-db: SELECT stage, SUM(amount) FROM deals GROUP BY stage
+# → antv-chart: generate_funnel_chart(data)
+# → /data:build-dashboard (embed chart vao page)
+```
+
+---
+
+#### Plugin 6: `code-review` → CODE QUALITY
+
+| Command | Khi nao |
+|---------|---------|
+| `/code-review:code-review` | Sau moi PR, truoc merge |
+
+---
+
+#### Plugin 7: `feature-dev` → FEATURE DEVELOPMENT
+
+| Agent | Khi nao |
+|-------|---------|
+| `feature-dev:code-architect` | Thiet ke architecture cho AI Assistant |
+| `feature-dev:code-explorer` | Phan tich codebase patterns truoc khi code |
 | `feature-dev:code-reviewer` | Review implementation |
 
-**8. frontend-design** — UI development
-| Agent | Khi nào dùng |
-|-------|-------------|
-| `frontend-design:frontend-design` | Tạo UI components chất lượng cao |
-
-**9. security-guidance** — Security
-| Skill | Khi nào dùng |
-|-------|-------------|
-| Security review | Trước mỗi commit có auth/API changes |
-
-**10. pr-review-toolkit** — PR quality gates
-| Agent | Khi nào dùng |
-|-------|-------------|
-| `pr-review-toolkit:code-reviewer` | Review code adherence |
-| `pr-review-toolkit:comment-analyzer` | Kiểm tra comments accuracy |
-| `pr-review-toolkit:pr-test-analyzer` | Test coverage check |
-| `pr-review-toolkit:silent-failure-hunter` | Tìm silent errors |
-| `pr-review-toolkit:type-design-analyzer` | Review type design |
-
-### C. 15+ Built-in Skills
-
-| Skill | Vai trò | Pipeline |
-|-------|---------|----------|
-| `/plan` | Lập kế hoạch implementation | P1 |
-| `/tdd` | Test-driven development | P1, P5 |
-| `/code-review` | Quick code review | P5 |
-| `/build-fix` | Sửa build errors | P6 |
-| `/verify` | Verify implementation | P5 |
-| `/e2e` | E2E tests với Playwright | P5 |
-| `/checkpoint` | Save progress checkpoint | P6 |
-| `/learn` | Extract reusable patterns | P6 |
-| `/refactor-clean` | Dead code cleanup | P6 |
-| `/test-coverage` | Check test coverage | P5 |
-| `/update-docs` | Update documentation | P6 |
-| `/implement-design` | Figma → production code | P2 |
-| `/ux-researcher-designer` | UX research & design | P2 |
-| `/tailwind-design-system` | Design system | P2 |
-| `/research` | AI-powered research | P2, P4 |
-
-### D. 15+ Task Agents
-
-| Agent | Chức năng | Auto-trigger |
-|-------|-----------|-------------|
-| `planner` | Implementation planning | Complex features |
-| `architect` | System design decisions | Architecture changes |
-| `tdd-guide` | TDD methodology | New features, bug fixes |
-| `code-reviewer` | Deep code review | After writing code |
-| `security-reviewer` | Security audit | Before commits |
-| `database-reviewer` | DB query/schema review | Schema changes |
-| `build-error-resolver` | Fix build errors | Build failures |
-| `e2e-runner` | Playwright E2E tests | Critical user flows |
-| `refactor-cleaner` | Dead code removal | Maintenance |
-| `doc-updater` | Documentation updates | After features |
-
----
-
-## III. 6 WORKFLOW PIPELINES
-
-### Pipeline 1: Feature Development (Core Engine)
-
-```
-Trigger: Yêu cầu feature mới hoặc API route
-Who: Developer (chính)
-
-┌─────────────┐    ┌──────────────┐    ┌──────────────┐
-│   /plan      │───▶│   /tdd       │───▶│  /build-fix  │
-│   planner    │    │   tdd-guide  │    │  build-error │
-│   agent      │    │   agent      │    │  -resolver   │
-└──────┬──────┘    └──────┬───────┘    └──────┬───────┘
-       │                  │                   │
-  MCP Used:          MCP Used:           MCP Used:
-  sequential-        hubspot-db          filesystem
-  thinking,          filesystem          git
-  memory             supabase
-```
-
-**Áp dụng cụ thể cho 20% còn lại:**
-
-| Task | Tools Chain |
-|------|------------|
-| P0: Pipelines API | `/plan` → `hubspot-db` (check schema) → `/tdd` → code → `/verify` |
-| P1: Properties API | `/plan` → `feature-dev:code-explorer` → `/tdd` → code → `/verify` |
-| P1: Emails API | `/plan` → `exa` (research email patterns) → `/tdd` → code |
-| P1: Meetings API | `/plan` → `tavily` (calendar integrations) → `/tdd` → code |
-| P2: Tickets API | `/customer-support:ticket-triage` → `/plan` → `/tdd` → code |
-| P2: Workflows API | `/plan` → `sequential-thinking` (complex logic) → `/tdd` → code |
-| P2: Sequences API | `/sales:draft-outreach` → `/plan` → `/tdd` → code |
-| P2: Quotes API | `stripe` (pricing) → `/plan` → `/tdd` → code |
-| P3: Chat API | `upstash` (real-time queues) → `/plan` → `/tdd` → code |
-| P3: Webhooks API | `/plan` → `fetch` (test webhooks) → `/tdd` → code |
-
----
-
-### Pipeline 2: UI/UX Design → Code
-
-```
-Trigger: Cần page/component mới hoặc redesign
-Who: Designer + Developer
-
-┌──────────────┐    ┌───────────────┐    ┌────────────────┐
-│  /research   │───▶│ /ux-researcher│───▶│/implement-     │
-│  tavily, exa │    │  -designer    │    │ design         │
-│  apify       │    │  figma-mcp    │    │ frontend-design│
-└──────┬───────┘    └──────┬────────┘    └──────┬─────────┘
-       │                   │                    │
-  MCP Used:           MCP Used:            MCP Used:
-  tavily, exa         figma-mcp            ui-ux
-  apify               ui-ux               filesystem
-```
-
-**Áp dụng cụ thể:**
-
-| Task | Tools Chain |
-|------|------------|
-| Clone HubSpot UI | `apify` (scrape) → `ui-ux` (tokens) → `/implement-design` |
-| Redesign dashboard | `figma-mcp` (review) → `/ux-researcher-designer` → `/frontend-design` |
-| New component | `ui-ux` (search patterns) → `/tailwind-design-system` → code |
-| Mobile responsive | `/research` (mobile CRM patterns) → `/implement-design` |
-
----
-
-### Pipeline 3: Data & Analytics
-
-```
-Trigger: Reports, dashboards, charts, metrics
-Who: Data analyst role
-
-┌──────────────┐    ┌───────────────┐    ┌────────────────┐
-│/data:explore  │───▶│ /data:analyze │───▶│ /data:build-   │
-│ -data         │    │ /data:sql-    │    │  dashboard     │
-│ hubspot-db    │    │  queries      │    │ antv-chart     │
-└──────┬────────┘    └──────┬────────┘    └──────┬─────────┘
-       │                    │                    │
-  MCP Used:            MCP Used:            MCP Used:
-  hubspot-db           hubspot-db           antv-chart
-  supabase             supabase             filesystem
-```
-
-**Áp dụng cụ thể:**
-
-| Task | Tools Chain |
-|------|------------|
-| Deal Forecast chart | `hubspot-db` → `/data:analyze` → `antv-chart` (line_chart) |
-| Sales Pipeline report | `hubspot-db` → `/data:sql-queries` → `antv-chart` (funnel) |
-| Contact analytics | `hubspot-db` → `/data:statistical-analysis` → `antv-chart` (pie) |
-| Revenue dashboard | `/data:build-dashboard` → `antv-chart` (dual_axes) |
-| Activity heatmap | `hubspot-db` → `/data:create-viz` → embed in page |
-
----
-
-### Pipeline 4: Business Logic (Sales + Marketing + Support)
-
-```
-Trigger: Business-specific features
-Who: Product + Developer
-
-┌──────────────────┐    ┌───────────────────┐    ┌─────────────┐
-│ /sales:*         │───▶│ /marketing:*      │───▶│ Build with  │
-│ /customer-       │    │ stripe            │    │ upstash     │
-│  support:*       │    │ exa               │    │ fetch       │
-└──────┬───────────┘    └──────┬────────────┘    └──────┬──────┘
-       │                       │                        │
-  Plugins:                Plugins:                 MCP Used:
-  sales                   marketing               stripe
-  customer-support        data                    upstash
-  product-management                              fetch
-```
-
-**Áp dụng cụ thể:**
-
-| Feature | Tools Chain |
-|---------|------------|
-| Deal Pipeline logic | `/sales:pipeline-review` → `hubspot-db` → code |
-| Email Sequences | `/sales:draft-outreach` → `/marketing:email-sequence` → code |
-| Ticket routing | `/customer-support:ticket-triage` → `sequential-thinking` → code |
-| Campaign mgmt | `/marketing:campaign-planning` → code |
-| Quotes/Invoicing | `stripe` (products, prices) → `hubspot-db` → code |
-| Chat real-time | `upstash` (Redis pub/sub) → code |
-| Webhook delivery | `upstash` (QStash) → `fetch` (test) → code |
-| KB search | `/customer-support:knowledge-management` → `exa` → code |
-| SEO for Landing Pages | `/marketing:seo-audit` → code |
-| Sales Forecast | `/sales:forecast` → `/data:analyze` → `antv-chart` |
-
----
-
-### Pipeline 5: Quality & Security (Gate)
-
-```
-Trigger: Trước mỗi commit/PR (BẮT BUỘC)
-Who: Automated + Reviewer
-
-┌──────────────┐    ┌───────────────┐    ┌────────────────┐
-│ /code-review │───▶│ /security-    │───▶│ pr-review-     │
-│ code-reviewer│    │  review       │    │  toolkit       │
-│ agent        │    │ security-     │    │ (5 agents)     │
-│              │    │  reviewer     │    │                │
-└──────┬───────┘    └──────┬────────┘    └──────┬─────────┘
-       │                   │                    │
-       ▼                   ▼                    ▼
-  /test-coverage      /e2e (Playwright)    /verify
-  tdd-guide           browser-use          database-reviewer
-```
-
-**Quality Gates (mỗi PR phải pass):**
-
-| Gate | Tool | Tiêu chuẩn |
-|------|------|-----------|
-| Code Quality | `code-review:code-review` | No CRITICAL/HIGH issues |
-| Security | `security-reviewer` agent | No OWASP top 10 |
-| Type Safety | `pr-review-toolkit:type-design-analyzer` | Strong invariants |
-| Silent Errors | `pr-review-toolkit:silent-failure-hunter` | No swallowed errors |
-| Test Coverage | `/test-coverage` | > 80% |
-| E2E | `/e2e` + `browser-use` | Critical flows pass |
-| DB Review | `database-reviewer` agent | Queries optimized |
-| Comments | `pr-review-toolkit:comment-analyzer` | Accurate comments |
-
----
-
-### Pipeline 6: DevOps & Maintenance
-
-```
-Trigger: Build errors, refactoring, documentation, releases
-Who: DevOps + Developer
-
-┌──────────────┐    ┌───────────────┐    ┌────────────────┐
-│ /build-fix   │───▶│ /refactor-    │───▶│ /update-docs   │
-│ build-error- │    │  clean        │    │ doc-updater    │
-│ resolver     │    │ refactor-     │    │ /checkpoint    │
-│              │    │  cleaner      │    │ /learn         │
-└──────┬───────┘    └──────┬────────┘    └──────┬─────────┘
-       │                   │                    │
-  MCP Used:           MCP Used:            MCP Used:
-  git                 filesystem           github (PR)
-  filesystem          git                  memory
-```
-
-**Routine tasks:**
-
-| Task | Tools Chain | Frequency |
-|------|------------|-----------|
-| Build fails | `/build-fix` → `build-error-resolver` | On error |
-| Dead code | `/refactor-clean` → `refactor-cleaner` agent | Weekly |
-| Update docs | `/update-docs` → `doc-updater` agent | After features |
-| Save patterns | `/learn` → `memory` (knowledge graph) | After milestones |
-| Checkpoint | `/checkpoint` → `git` commit | Daily |
-| Release | `github` (create PR) → `pr-review-toolkit` → merge | Per sprint |
-
----
-
-## IV. ÁP DỤNG CHO 20% CÒN LẠI
-
-### Sprint tiếp theo: Hoàn thành API Routes
-
-#### Batch 1: P0 - Pipelines & Stages API
-```
-1. /plan "Pipelines & Stages REST API"
-2. hubspot-db → SELECT * FROM pipelines, pipeline_stages (check schema)
-3. feature-dev:code-explorer → Scan existing server actions
-4. /tdd → Write tests first
-5. Code: src/app/api/pipelines/route.ts
-6. Code: src/app/api/pipelines/[id]/stages/route.ts
-7. /code-review → Review
-8. /verify → Test endpoints
-```
-
-#### Batch 2: P1 - Properties, Emails, Meetings API
-```
-1. /plan "Properties + Emails + Meetings API" (3 modules)
-2. hubspot-db → Check schema for each
-3. /sales:call-prep → Understand meeting workflow
-4. /tdd → Tests for all 3
-5. Code: 3 API route files
-6. /code-review + security-reviewer → Review
-```
-
-#### Batch 3: P2 - Tickets, Workflows, Sequences, Quotes, Notifications
-```
-1. /customer-support:ticket-triage → Ticket API design
-2. /sales:draft-outreach → Sequence API design
-3. stripe → Quote/Invoice API design
-4. /plan → Combined implementation plan
-5. /tdd → Tests
-6. Code: 6 API route files
-7. pr-review-toolkit → Full PR review (5 agents parallel)
-```
-
-#### Batch 4: P3 - Landing Pages, Chat, Webhooks
-```
-1. /marketing:campaign-planning → Landing page API design
-2. upstash → Chat real-time + Webhook delivery design
-3. /plan → Implementation plan
-4. /tdd → Tests
-5. Code: 3 API route files
-6. /verify + /e2e → End-to-end verification
-```
-
----
-
-## V. CAPABILITIES MỚI (Chưa khai thác)
-
-### 1. Stripe Integration → Quotes & Billing
-```
-Hiện tại: Quotes module chỉ có UI
-Kế hoạch:
-  stripe.create_product → Tạo sản phẩm
-  stripe.create_price → Định giá
-  stripe.create_payment_link → Link thanh toán
-  stripe.create_invoice → Tạo hóa đơn
-
-Workflow:
-  Quote created in F-CORE → stripe.create_invoice → Send to customer
-```
-
-### 2. Upstash Redis → Caching & Real-time
-```
-Hiện tại: Chưa sử dụng
-Kế hoạch:
-  - Cache frequently accessed data (contacts list, pipeline stages)
-  - Rate limiting cho API routes
-  - QStash cho webhook delivery (reliable, retry)
-  - Real-time chat messages (Redis pub/sub)
-
-Workflow:
-  API request → Check Redis cache → If miss → Query DB → Cache result
-  Webhook event → QStash publish → Reliable delivery with retries
-```
-
-### 3. AntV Charts → Interactive Reports
-```
-Hiện tại: Static charts
-Kế hoạch:
-  - Deal pipeline funnel chart
-  - Revenue trend line chart
-  - Contact source pie chart
-  - Activity timeline area chart
-  - Sales forecast dual axes chart
-
-Workflow:
-  hubspot-db (query) → antv-chart (generate) → Embed in dashboard
-```
-
-### 4. Memory Graph → Cross-session Intelligence
-```
-Hiện tại: Empty graph
-Kế hoạch:
-  - Store architecture decisions
-  - Remember code patterns used
-  - Track feature dependencies
-  - Cache research findings
-
-Workflow:
-  After each milestone → memory.create_entities → Persist learnings
-```
-
-### 5. Data Plugin → Advanced Analytics
-```
-Hiện tại: Basic reports
-Kế hoạch:
-  /data:build-dashboard → Interactive sales dashboard
-  /data:statistical-analysis → Trend analysis
-  /data:sql-queries → Optimized report queries
-```
-
----
-
-## VI. DAILY WORKFLOW
-
-### Bắt đầu phiên làm việc
+**Vi du thuc te:**
 ```bash
-# 1. Check context
-bd ready                              # Xem issues sẵn sàng
-bd list --status=in_progress          # Xem đang làm gì
+# Truoc khi code AI Assistant:
+# 1. feature-dev:code-explorer → Scan existing patterns
+# 2. feature-dev:code-architect → Design AI module architecture
+# 3. Code...
+# 4. feature-dev:code-reviewer → Review
+```
 
-# 2. Chọn task và bắt đầu
-bd update <id> --status=in_progress   # Claim task
-/plan "Task description"              # Lập kế hoạch
+---
+
+#### Plugin 8: `frontend-design` → UI DEVELOPMENT
+
+| Agent | Khi nao |
+|-------|---------|
+| `frontend-design:frontend-design` | Tao AI chat interface, new UI components |
+
+**Vi du thuc te:**
+```bash
+# Build AI Chat UI:
+# ui-ux MCP: search_all("chat interface CRM")
+# → frontend-design agent: Create chat components
+# → /tailwind-design-system: Apply F-CORE tokens
+```
+
+---
+
+#### Plugin 9: `pr-review-toolkit` → PR QUALITY GATES
+
+| Agent | Chuc nang | Khi nao |
+|-------|-----------|---------|
+| `code-reviewer` | Review code adherence | Moi PR |
+| `comment-analyzer` | Kiem tra comments accuracy | PR co nhieu comments |
+| `pr-test-analyzer` | Test coverage check | PR co code moi |
+| `silent-failure-hunter` | Tim silent errors | PR co try-catch |
+| `type-design-analyzer` | Review type design | PR co types moi |
+
+**CHAY SONG SONG 5 agents cho moi PR lon:**
+```bash
+# Parallel review:
+Task(pr-review-toolkit:code-reviewer)      # ──┐
+Task(pr-review-toolkit:comment-analyzer)    # ──┤ Song song
+Task(pr-review-toolkit:pr-test-analyzer)    # ──┤
+Task(pr-review-toolkit:silent-failure-hunter)# ──┤
+Task(pr-review-toolkit:type-design-analyzer) # ──┘
+```
+
+---
+
+#### Plugin 10: `frontend-design` (duplicate, da liet ke o #8)
+
+---
+
+### ═══════════════════════════════════════
+### C. 15+ BUILT-IN SKILLS
+### ═══════════════════════════════════════
+
+| Skill | Vai tro | Khi nao dung |
+|-------|---------|-------------|
+| `/plan` | Lap ke hoach implementation | DAU MOI FEATURE |
+| `/tdd` | Test-driven development | Code features moi |
+| `/code-review` | Quick code review | Sau khi code |
+| `/build-fix` | Fix build errors | Khi build fail |
+| `/verify` | Verify implementation | Sau khi code xong |
+| `/e2e` | E2E tests Playwright | Critical user flows |
+| `/checkpoint` | Save progress | Cuoi moi phien |
+| `/learn` | Extract patterns | Sau milestones |
+| `/refactor-clean` | Dead code cleanup | Dinh ky |
+| `/test-coverage` | Check coverage | Truoc PR |
+| `/update-docs` | Update docs | Sau features |
+| `/implement-design` | Figma → code | Khi co design |
+| `/ux-researcher-designer` | UX research | Truoc UI moi |
+| `/tailwind-design-system` | Design system | Code UI |
+| `/research` | AI research | Tim hieu topics |
+
+---
+
+### ═══════════════════════════════════════
+### D. 15+ TASK AGENTS
+### ═══════════════════════════════════════
+
+| Agent | Khi nao tu dong trigger |
+|-------|----------------------|
+| `planner` | Feature requests phuc tap |
+| `architect` | Architectural decisions |
+| `tdd-guide` | New features, bug fixes |
+| `code-reviewer` | Sau khi viet code |
+| `security-reviewer` | Truoc commits co auth/API |
+| `database-reviewer` | Schema changes |
+| `build-error-resolver` | Build failures |
+| `e2e-runner` | Critical user flows |
+| `refactor-cleaner` | Code maintenance |
+| `doc-updater` | Documentation |
+| `go-reviewer` | N/A (TypeScript project) |
+| `python-reviewer` | N/A (TypeScript project) |
+| `go-build-resolver` | N/A |
+
+---
+
+## III. 7 WORKFLOW PIPELINES CHO GIAI DOAN MOI
+
+### ═══════════════════════════════════════
+### Pipeline 1: AI ASSISTANT DEVELOPMENT
+### ═══════════════════════════════════════
+
+```
+Trigger: Build F-CORE Copilot
+Duration: Phase 1-4 (xem AI_ASSISTANT_PLAN.md)
+
+RESEARCH:
+  exa.get_code_context("Vercel AI SDK useChat streaming")
+  tavily.search("HubSpot ChatSpot AI CRM features 2026")
+  /research "AI assistant CRM best practices"
+
+DESIGN:
+  /product-management:feature-spec "AI CRM Assistant"
+  feature-dev:code-architect → Design AI module
+  sequential-thinking → Tool calling architecture
+  ui-ux.search_all("AI chat interface SaaS")
+
+BUILD:
+  Phase 1 (Foundation):
+    supabase.apply_migration → AIConversation + AIMessage tables
+    /tdd → Write tests first
+    Code: /api/ai/chat (streaming), /api/ai/conversations CRUD
+    Code: AI chat UI components
+    /build-fix → Fix any issues
+
+  Phase 2 (CRM Tools):
+    hubspot-db → Query patterns for each tool
+    /sales:pipeline-review → Pipeline tool logic
+    /sales:forecast → Forecast tool logic
+    /customer-support:knowledge-management → KB search tool
+    Code: 13 AI tools with tenant_id scoping
+
+  Phase 3 (Advanced):
+    /marketing:email-sequence → Email drafting tool
+    /data:analyze → Revenue analytics tool
+    antv-chart → Inline chart generation in chat
+    memory → Store conversation patterns
+
+REVIEW:
+  code-reviewer + security-reviewer (parallel)
+  pr-review-toolkit: 5 agents (parallel)
+  /e2e → Test AI chat flow
+```
+
+---
+
+### ═══════════════════════════════════════
+### Pipeline 2: STRIPE INTEGRATION
+### ═══════════════════════════════════════
+
+```
+Trigger: Quotes & Billing module
+MCP chinh: stripe
+
+WORKFLOW:
+  1. stripe.list_products → Check existing
+  2. stripe.search_stripe_documentation("invoicing Node.js")
+  3. /plan "Stripe integration for Quotes"
+
+  4. stripe.create_product → CRM Products
+  5. stripe.create_price → Pricing tiers
+  6. stripe.create_customer → Sync contacts
+  7. stripe.create_invoice → From quotes
+  8. stripe.create_payment_link → Share with contacts
+
+  9. hubspot-db → Store Stripe refs in CRM
+  10. /tdd → Test integration
+  11. /verify → End-to-end check
+
+MAPPING vao F-CORE:
+  Quote "Accepted" → stripe.create_invoice → Send to customer
+  Contact created → stripe.create_customer → Link accounts
+  Product in Quote → stripe.create_product + create_price
+```
+
+---
+
+### ═══════════════════════════════════════
+### Pipeline 3: REDIS CACHING (UPSTASH)
+### ═══════════════════════════════════════
+
+```
+Trigger: Performance optimization
+MCP chinh: upstash
+
+WORKFLOW:
+  1. upstash.redis_database_create_new("f-core-cache", "us-east-1")
+  2. /plan "Redis caching strategy"
+
+  3. CACHE LAYER:
+     upstash.redis_database_run_redis_commands([
+       ["SET", "contacts:tenant-1:list", JSON.stringify(data), "EX", "300"],
+       ["GET", "contacts:tenant-1:list"]
+     ])
+
+  4. RATE LIMITING:
+     upstash.redis_database_run_redis_commands([
+       ["INCR", "rate:user-1:ai-chat"],
+       ["EXPIRE", "rate:user-1:ai-chat", "3600"]
+     ])
+
+  5. WEBHOOK QUEUES:
+     upstash.qstash_publish_message({
+       destination: "https://app.f-core.com/api/webhooks/deliver",
+       body: JSON.stringify(webhookPayload),
+       retries: 3
+     })
+
+  6. AI RATE CONTROL:
+     upstash.qstash_publish_message({
+       destination: "/api/ai/chat",
+       flow_control: { key: "ai-chat", rate: 10, period: "1m" }
+     })
+
+AP DUNG:
+  /api/contacts GET → Redis cache (5 min TTL)
+  /api/deals GET    → Redis cache (5 min TTL)
+  /api/ai/chat POST → Rate limit (100/hour/user)
+  Webhook events    → QStash queue (reliable delivery)
+```
+
+---
+
+### ═══════════════════════════════════════
+### Pipeline 4: INTERACTIVE REPORTS
+### ═══════════════════════════════════════
+
+```
+Trigger: Reports & Dashboard module
+MCP chinh: antv-chart + hubspot-db
+
+WORKFLOW:
+  1. hubspot-db → Aggregate queries
+  2. /data:explore-data → Profile data shape
+  3. /data:sql-queries → Optimize queries
+
+  4. CHARTS:
+     antv-chart.generate_funnel_chart    → Deal pipeline
+     antv-chart.generate_line_chart      → Revenue trend
+     antv-chart.generate_pie_chart       → Contact sources
+     antv-chart.generate_column_chart    → Monthly deals
+     antv-chart.generate_dual_axes_chart → Revenue vs Deals
+     antv-chart.generate_area_chart      → Activity over time
+     antv-chart.generate_radar_chart     → Sales rep performance
+
+  5. /data:build-dashboard → Interactive HTML dashboard
+  6. /data:validate → QA before shipping
+
+VI DU:
+  hubspot-db: "SELECT stage, COUNT(*), SUM(amount) FROM deals GROUP BY stage"
+  → antv-chart.generate_funnel_chart({
+      data: [
+        { category: "Qualification", value: 45000 },
+        { category: "Proposal", value: 120000 },
+        { category: "Negotiation", value: 80000 },
+        { category: "Closed Won", value: 200000 }
+      ],
+      title: "Deal Pipeline"
+    })
+```
+
+---
+
+### ═══════════════════════════════════════
+### Pipeline 5: E2E TESTING
+### ═══════════════════════════════════════
+
+```
+Trigger: Critical user flows
+MCP chinh: browser-use
+Skill chinh: /e2e
+
+CRITICAL FLOWS TO TEST:
+  1. Login → Dashboard → View contacts
+  2. Create contact → Add to company → Create deal
+  3. Deal pipeline → Drag to stage → Update amount
+  4. AI Assistant → Ask question → Get CRM data
+  5. Create quote → Add line items → Send
+
+WORKFLOW:
+  /e2e "Test contact creation flow"
+  → Playwright test generated
+  → browser-use.browser_task("Navigate to /contacts, click New, fill form, submit")
+  → Verify: Contact appears in list
+
+  /e2e "Test AI chat flow"
+  → browser-use.browser_task("Open AI assistant, type 'show pipeline', verify response")
+```
+
+---
+
+### ═══════════════════════════════════════
+### Pipeline 6: QUALITY & SECURITY (Gate)
+### ═══════════════════════════════════════
+
+```
+Trigger: Truoc moi PR (BAT BUOC)
+
+PARALLEL REVIEW (5 agents cung luc):
+  ┌─ code-reviewer           → Code quality
+  ├─ security-reviewer       → OWASP, tenant isolation
+  ├─ database-reviewer       → Query optimization
+  ├─ silent-failure-hunter   → Error handling
+  └─ type-design-analyzer    → Type safety
+
+THEN SEQUENTIAL:
+  /test-coverage → Check > 80%
+  /e2e → Critical paths
+  /verify → Final check
+
+SECURITY CHECKLIST (cho AI features):
+  security-reviewer → Check:
+    - tenant_id on ALL AI queries
+    - Rate limiting on AI endpoints
+    - Input sanitization (prompt injection)
+    - No PII leaks to LLM
+    - Audit logging for AI actions
+```
+
+---
+
+### ═══════════════════════════════════════
+### Pipeline 7: DEVOPS & MAINTENANCE
+### ═══════════════════════════════════════
+
+```
+Trigger: Build errors, cleanup, docs, releases
+
+BUILD FAILS:
+  /build-fix → build-error-resolver agent → Fix → Verify
+
+WEEKLY CLEANUP:
+  /refactor-clean → refactor-cleaner agent → Remove dead code
+
+DOCS UPDATE:
+  /update-docs → doc-updater agent → Update README, CHANGELOG
+
+PATTERN EXTRACTION:
+  /learn → memory.create_entities → Persist patterns
+
+RELEASE:
+  git.git_status → git.git_commit → github.create_pull_request
+  → pr-review-toolkit (5 agents) → github.merge_pull_request
+```
+
+---
+
+## IV. TOOL SELECTION MATRIX (CAP NHAT)
+
+### "Toi can..." → Dung tool nao?
+
+| Toi can... | Skill/Command | MCP | Agent |
+|------------|-------------|-----|-------|
+| **AI ASSISTANT** | | | |
+| Research AI SDK | `/research` | `exa`, `tavily` | - |
+| Design AI architecture | `/plan` | `sequential-thinking` | `architect` |
+| Build AI chat API | `/tdd` | `hubspot-db` | `tdd-guide` |
+| Build AI chat UI | `/frontend-design` | `ui-ux` | `frontend-design` |
+| AI tool calling logic | - | `hubspot-db`, `thinking` | - |
+| **STRIPE** | | | |
+| Setup products/prices | - | `stripe` | - |
+| Create invoices | - | `stripe` | - |
+| Payment links | - | `stripe` | - |
+| Stripe docs | - | `stripe` (search_docs) | - |
+| **CACHING** | | | |
+| Setup Redis | - | `upstash` | - |
+| Cache API responses | - | `upstash` | - |
+| Rate limiting | - | `upstash` | - |
+| Webhook queues | - | `upstash` (qstash) | - |
+| **REPORTS** | | | |
+| Pipeline funnel | `/data:analyze` | `antv-chart`, `hubspot-db` | - |
+| Revenue trends | `/data:create-viz` | `antv-chart`, `hubspot-db` | - |
+| Interactive dashboard | `/data:build-dashboard` | `antv-chart` | - |
+| SQL optimization | `/data:sql-queries` | `hubspot-db` | `database-reviewer` |
+| **TESTING** | | | |
+| Unit tests | `/tdd` | - | `tdd-guide` |
+| E2E tests | `/e2e` | `browser-use` | `e2e-runner` |
+| Test coverage | `/test-coverage` | - | - |
+| **QUALITY** | | | |
+| Code review | `/code-review` | - | `code-reviewer` |
+| Security audit | `/security-review` | - | `security-reviewer` |
+| PR review (full) | `/pr-review-toolkit:review-pr` | `github` | 5 agents |
+| Dead code cleanup | `/refactor-clean` | - | `refactor-cleaner` |
+| **DESIGN** | | | |
+| UI patterns | `/ux-researcher-designer` | `ui-ux` | - |
+| Design system | `/tailwind-design-system` | `ui-ux` | - |
+| Figma to code | `/implement-design` | `figma-mcp` | - |
+| Clone competitor UI | `/apify-ultimate-scraper` | `apify` | - |
+| **BUSINESS** | | | |
+| Sales pipeline logic | `/sales:pipeline-review` | `hubspot-db` | - |
+| Revenue forecast | `/sales:forecast` | `hubspot-db` | - |
+| Email templates | `/marketing:content-creation` | - | - |
+| Ticket triage | `/customer-support:ticket-triage` | - | - |
+| Campaign planning | `/marketing:campaign-planning` | - | - |
+| Feature PRD | `/product-management:feature-spec` | - | - |
+| Competitive analysis | `/product-management:competitive-analysis` | `exa` | - |
+
+---
+
+## V. DAILY WORKFLOW (CAP NHAT)
+
+### Bat dau phien
+```bash
+bd ready                              # Xem issues san sang
+bd list --status=in_progress          # Xem dang lam gi
+
+# Doc context
+cat docs/AI_ASSISTANT_PLAN.md         # Ke hoach AI (neu dang build AI)
 ```
 
 ### Trong khi code
 ```bash
 # Feature development
+/plan "Feature description"           # Lap ke hoach
 /tdd                                  # TDD workflow
 hubspot-db → query                    # Check data
-/build-fix                            # Nếu build lỗi
+/build-fix                            # Neu build loi
+
+# AI development
+exa.get_code_context("...")           # Tim SDK docs
+sequential-thinking                   # Design tool calling
 
 # UI development
-/implement-design                     # Design → Code
-/tailwind-design-system               # Design tokens
+ui-ux.search_all("...")               # Tim patterns
+/frontend-design                      # Build UI
 ```
 
-### Trước khi commit
+### Truoc khi commit
 ```bash
-# Quality gates (chạy parallel)
-/code-review                          # Code review
-/security-review                      # Security check
-/test-coverage                        # Coverage check
-/verify                               # Final verification
+# Quality gates (song song)
+code-reviewer                         # ──┐
+security-reviewer                     # ──┤ Parallel
+database-reviewer                     # ──┘
+/test-coverage                        # Check coverage
+/verify                               # Final check
 ```
 
-### Kết thúc phiên
+### Ket thuc phien
 ```bash
-# Close & sync
-bd close <id>                         # Close completed tasks
-/checkpoint                           # Save checkpoint
+bd close <id>                         # Close tasks
+/checkpoint                           # Save progress
 /learn                                # Extract patterns
-bd sync                               # Sync with git
-git push                              # Push to remote
+bd sync && git push                   # Push to remote
 ```
 
 ---
 
-## VII. TOOL SELECTION MATRIX
+## VI. PARALLEL EXECUTION STRATEGY
 
-### Tôi cần... → Dùng tool nào?
-
-| Tôi cần... | Tool/Skill | MCP |
-|------------|-----------|-----|
-| Viết PRD cho feature | `/product-management:feature-spec` | - |
-| Research cách HubSpot làm | `/research` | `tavily`, `exa` |
-| Clone UI từ website | `/apify-ultimate-scraper` | `apify` |
-| Thiết kế UX flow | `/ux-researcher-designer` | `ui-ux` |
-| Convert Figma → code | `/implement-design` | `figma-mcp` |
-| Tạo component đẹp | `/frontend-design` | `ui-ux` |
-| Check database schema | - | `hubspot-db` |
-| Viết API route mới | `/plan` → `/tdd` | `hubspot-db` |
-| Tạo chart/báo cáo | `/data:create-viz` | `antv-chart` |
-| Build dashboard | `/data:build-dashboard` | `antv-chart`, `hubspot-db` |
-| Tích hợp thanh toán | - | `stripe` |
-| Thêm caching | - | `upstash` |
-| E2E testing | `/e2e` | `browser-use` |
-| Security audit | `/security-review` | - |
-| Code review | `/code-review` | - |
-| PR review đầy đủ | `/pr-review-toolkit:review-pr` | `github` |
-| Fix build errors | `/build-fix` | - |
-| Dọn dead code | `/refactor-clean` | - |
-| Update docs | `/update-docs` | - |
-| Lưu kiến thức | `/learn` | `memory` |
-| So sánh với đối thủ | `/product-management:competitive-analysis` | `exa` |
-| Thiết kế campaign | `/marketing:campaign-planning` | - |
-| Triage tickets | `/customer-support:ticket-triage` | - |
-| Sales forecast | `/sales:forecast` | `hubspot-db` |
-| SEO audit | `/marketing:seo-audit` | `tavily` |
-| SQL optimization | `/data:sql-queries` | `hubspot-db` |
-| Git operations | `/checkpoint` | `git` |
-
----
-
-## VIII. PARALLEL EXECUTION STRATEGY
-
-### Khi nào chạy song song?
-
+### ✅ CHAY SONG SONG (khong phu thuoc):
 ```
-✅ SONG SONG (không phụ thuộc nhau):
 - code-reviewer + security-reviewer + database-reviewer
 - tavily search + exa search + apify scrape
-- Multiple API route files cùng lúc
-- pr-review-toolkit: 5 agents cùng lúc
+- pr-review-toolkit: 5 agents cung luc
+- Multiple test files
+- stripe.list_products + upstash.redis_list + hubspot-db query
+```
 
-❌ TUẦN TỰ (có phụ thuộc):
+### ❌ CHAY TUAN TU (co phu thuoc):
+```
 - /plan → /tdd → code → /verify
-- hubspot-db (check) → code → hubspot-db (verify)
-- /build-fix → /code-review → git commit
+- supabase.apply_migration → code API routes → run tests
+- stripe.create_product → stripe.create_price → stripe.create_payment_link
+- Research → Design → Build → Review
 ```
 
 ---
 
-*Tài liệu v2.0 - Cập nhật 2026-02-11. Mapping đầy đủ 88 tools vào F-CORE project.*
+## VII. IMPLEMENTATION ORDER (NEXT STEPS)
+
+### Sprint tiep theo:
+
+| # | Task | Pipeline | Tools Chinh | Uu tien |
+|---|------|----------|-------------|---------|
+| 1 | AI Assistant Phase 1 | Pipeline 1 | `exa`, AI SDK, `supabase` | P0 |
+| 2 | AI Assistant Phase 2 | Pipeline 1 | `hubspot-db`, tools | P0 |
+| 3 | Stripe Integration | Pipeline 2 | `stripe` | P1 |
+| 4 | Redis Caching | Pipeline 3 | `upstash` | P1 |
+| 5 | Interactive Charts | Pipeline 4 | `antv-chart`, `hubspot-db` | P2 |
+| 6 | E2E Tests | Pipeline 5 | `browser-use`, Playwright | P2 |
+| 7 | Security Hardening | Pipeline 6 | `security-reviewer` | P3 |
+| 8 | AI Assistant Phase 3-4 | Pipeline 1 | All | P3 |
+
+---
+
+*Version 3.0 - Cap nhat 2026-02-11. API routes 100% done, chuyen sang Advanced Features.*
+*Tham chieu: docs/AI_ASSISTANT_PLAN.md, docs/MASTER_PLAN.md*
