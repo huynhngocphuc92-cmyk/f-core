@@ -47,6 +47,7 @@ model User {
   chatAssigned    ChatConversation[] @relation("ChatAssignee")
   webhooks        Webhook[]
   auditLogs       AuditLog[]
+  aiConversations AIConversation[]
 
   @@index([tenantId])
   @@index([email])
@@ -83,6 +84,7 @@ model Tenant {
   chatConversations ChatConversation[]
   webhooks        Webhook[]
   auditLogs       AuditLog[]
+  aiConversations AIConversation[]
 }
 
 // ============================================
@@ -1321,4 +1323,53 @@ model AuditLog {
   @@index([tenantId, entity])
   @@index([tenantId, createdAt(sort: Desc)])
   @@index([entityId])
+}
+
+// ============================================
+// AI ASSISTANT
+// ============================================
+
+model AIConversation {
+  id          String    @id @default(uuid())
+  tenantId    String
+  userId      String
+  title       String?
+  model       String    @default("claude-sonnet-4-5")
+
+  // Context: attach conversation to a CRM object
+  contextType String?   // "contact" | "deal" | "company" | null
+  contextId   String?
+
+  metadata    Json      @default("{}")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  messages    AIMessage[]
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, userId])
+  @@index([tenantId, contextType, contextId])
+}
+
+model AIMessage {
+  id              String    @id @default(uuid())
+  conversationId  String
+  role            String    // "user" | "assistant" | "system" | "tool"
+  content         String    @db.Text
+
+  // Tool calling
+  toolCalls       Json?
+  toolResults     Json?
+
+  // Usage tracking
+  promptTokens    Int?
+  completionTokens Int?
+
+  createdAt       DateTime  @default(now())
+
+  conversation    AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
 }

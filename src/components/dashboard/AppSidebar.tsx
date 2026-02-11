@@ -29,6 +29,7 @@ import {
   Layout,
   MessageCircle,
   Shield,
+  Bot,
 } from "lucide-react";
 
 const navigation = [
@@ -49,6 +50,7 @@ const navigation = [
   { name: "Forms", href: "/forms", icon: FileText },
   { name: "Knowledge Base", href: "/knowledge-base", icon: BookOpen },
   { name: "Reports", href: "/reports", icon: BarChart3 },
+  { name: "AI Copilot", href: "/ai-assistant", icon: Bot },
 ];
 
 const bottomNavigation = [
