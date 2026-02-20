@@ -86,6 +86,7 @@ model Tenant {
   commerceDunningConfigs CommerceDunningConfig[]
   commerceDunningCases CommerceDunningCase[]
   commercePaymentProviders CommercePaymentProviderConfig[]
+  commercePayments CommercePayment[]
   marketingAdsConnectors MarketingAdsConnector[]
   marketingAdsCampaigns MarketingAdsCampaign[]
   marketingSocialPosts MarketingSocialPost[]
@@ -1251,6 +1252,8 @@ model CommerceInvoice {
   currency        String    @default("USD")
   status          String    @default("draft") // draft, sent, paid, void
   notes           String?   @db.Text
+  stripeInvoiceId String?
+  stripePaymentIntentId String?
 
   issuedAt        DateTime?
   dueDate         DateTime?
@@ -1286,6 +1289,9 @@ model CommerceSubscription {
   currentPeriodEnd    DateTime
   nextBillingAt       DateTime?
   renewalCount        Int       @default(0)
+  stripeSubscriptionId String?
+  stripeCustomerId     String?
+  stripePriceId        String?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -1355,6 +1361,52 @@ model CommercePaymentProviderConfig {
   tenant                 Tenant    @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, provider])
+  @@index([tenantId])
+}
+
+model CommercePayment {
+  id                String    @id @default(uuid())
+  tenantId          String
+
+  invoiceId         String?
+  subscriptionId    String?
+  customerName      String
+  amount            Decimal   @db.Decimal(15, 2)
+  currency          String    @default("USD")
+  status            String    @default("pending") // pending, processing, succeeded, failed, refunded
+  method            String    @default("card") // card, bank_transfer, manual
+  stripePaymentIntentId  String?   @unique
+  stripeChargeId         String?
+  stripeCustomerId       String?
+  refundedAmount    Decimal?  @db.Decimal(15, 2)
+  refundedAt        DateTime?
+  failureReason     String?
+  metadata          Json      @default("{}")
+  paidAt            DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  tenant            Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([invoiceId])
+  @@index([subscriptionId])
+  @@index([stripePaymentIntentId])
+}
+
+model CommerceStripeEvent {
+  id            String    @id @default(uuid())
+  tenantId      String?
+  stripeEventId String    @unique
+  type          String
+  payload       Json
+  processed     Boolean   @default(false)
+  error         String?
+  createdAt     DateTime  @default(now())
+
+  @@index([stripeEventId])
+  @@index([type])
   @@index([tenantId])
 }
 

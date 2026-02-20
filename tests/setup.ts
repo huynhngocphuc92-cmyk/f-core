@@ -318,6 +318,8 @@ function createMockPrisma() {
   const ssoConfig = buildStatefulModel();
   const tenantPolicy = buildStatefulModel();
   const scimUser = buildStatefulModel();
+  const commercePayment = buildStatefulModel();
+  const commerceStripeEvent = buildStatefulModel();
 
   return {
     contact: mockModelMethods(),
@@ -397,6 +399,8 @@ function createMockPrisma() {
     ssoConfig,
     tenantPolicy,
     scimUser,
+    commercePayment,
+    commerceStripeEvent,
     aIConversation: mockModelMethods(),
     aIMessage: mockModelMethods(),
     meetingType: mockModelMethods(),
