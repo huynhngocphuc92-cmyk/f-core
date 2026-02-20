@@ -1,33 +1,33 @@
 # F-CORE Development Strategy
-> Version: 3.0
-> Last Updated: 2026-02-11
+> Version: 3.1
+> Last Updated: 2026-02-14
 > Purpose: Ke hoach su dung toan bo 18 MCP + 10 Plugins + 50+ Skills + 15+ Agents
-> Status: API Routes 100% done (498 tests) → Chuyen sang Phase B: Advanced Features
+> Status: API Routes + AI Assistant Phase 1 da trien khai, dang chuyen sang hardening va E2E expansion
 
 ---
 
 ## I. TONG QUAN HIEN TRANG
 
-### Tien do: ~85% hoan thanh
+### Tien do: ~90% hoan thanh
 
 | Hang muc | So luong | Status |
 |----------|---------|--------|
-| Database tables (Prisma) | 33 models | ✅ Done |
-| Dashboard pages | 55 pages | ✅ Done |
+| Database tables (Prisma) | 42 models | ✅ Done |
+| Dashboard pages | 60+ pages | ✅ Done |
 | Server Actions | 16 files | ✅ Done |
-| API Routes | 44 files | ✅ Done |
+| API Routes | 75 route files | ✅ Done |
 | Components | 100+ | ✅ Done |
-| Unit Tests | 498 tests / 58 files | ✅ Done |
-| AI Assistant | 0 | ❌ Chua bat dau |
-| E2E Tests | 0 | ❌ Chua bat dau |
+| Unit Tests | 500+ tests / 59 files | ✅ Done |
+| AI Assistant | Phase 1 | ✅ Done |
+| E2E Tests | Baseline + critical flows | ✅ In progress |
 | Stripe Integration | 0 | ❌ Chua bat dau |
 | Redis Caching | 0 | ❌ Chua bat dau |
 
-### Con thieu (~15%): Advanced Features
+### Con thieu (~10%): Advanced Features
 
 | Priority | Feature | Tools Chinh |
 |----------|---------|-------------|
-| P0 | **AI Assistant (Copilot)** | Vercel AI SDK, OpenAI |
+| P0 | **AI Assistant Phase 2 (agent workflows)** | Vercel AI SDK, OpenAI |
 | P1 | Stripe Integration (Quotes/Billing) | `stripe` MCP |
 | P1 | Redis Caching & Rate Limiting | `upstash` MCP |
 | P2 | E2E Testing | `browser-use` MCP, Playwright |

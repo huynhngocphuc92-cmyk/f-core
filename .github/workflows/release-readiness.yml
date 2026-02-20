@@ -1,0 +1,42 @@
+name: Release Readiness Gates
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  release-readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Gate - Unit/API tests
+        run: npm test
+
+      - name: Gate - Security regression
+        run: npm run test:security
+
+      - name: Gate - AI eval benchmarks
+        run: npm run test:ai-evals
+
+      - name: Gate - Production build
+        run: npm run build

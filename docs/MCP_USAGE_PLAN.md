@@ -1,7 +1,7 @@
 # KẾ HOẠCH SỬ DỤNG MCP SERVERS
 > Dự án: F-CORE (HubSpot Clone)
-> Ngày cập nhật: 2026-02-04
-> Status: ✅ ĐÃ CẤU HÌNH
+> Ngày cập nhật: 2026-02-15
+> Status: ✅ ĐANG HOẠT ĐỘNG (còn thiếu GitHub token hợp lệ)
 
 ---
 
@@ -23,6 +23,13 @@
 
 - **Project config:** `/Users/chong/hubspot-demo/.mcp.json`
 - **Global config:** `/Users/chong/.mcp.json`
+
+### C. Execution update (2026-02-15)
+
+- PostgreSQL đã chạy và DB `hubspot_clone` đã tồn tại.
+- Tavily API key đã verify thành công.
+- Supabase URL + anon key đã verify endpoint thành công.
+- GitHub MCP vẫn cần PAT hợp lệ (`GITHUB_TOKEN` hiện thiếu/invalid).
 
 ---
 
@@ -430,11 +437,11 @@ curl -H "Authorization: token YOUR_TOKEN" https://api.github.com/user
 
 ## VI. NEXT ACTIONS
 
-1. [ ] Start PostgreSQL và tạo database `hubspot_clone`
-2. [ ] Tạo GitHub Personal Access Token và cập nhật `.mcp.json`
-3. [ ] Tạo Supabase project cho production
-4. [ ] Cài đặt Tavily MCP với API key từ `.env`
-5. [ ] Test từng MCP server hoạt động
+1. [x] Start PostgreSQL và tạo database `hubspot_clone`
+2. [ ] Tạo GitHub Personal Access Token hợp lệ và cập nhật `GITHUB_TOKEN`
+3. [x] Tạo Supabase project cho production
+4. [x] Cài đặt Tavily MCP với API key từ `.env`
+5. [ ] Test đầy đủ từng MCP server qua client MCP (chưa verify end-to-end cho GitHub)
 
 ---
 

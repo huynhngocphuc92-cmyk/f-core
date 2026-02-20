@@ -776,20 +776,18 @@ Monthly Review:
 
 ## X. NEXT IMMEDIATE ACTIONS
 
-### Today
-- [ ] Finalize database schema
-- [ ] Setup Prisma with initial migration
-- [ ] Create base layout components
+> Source of truth: `docs/JIRA_BACKLOG_PLAN.md` (execution status + sprint planning)
 
-### This Week
-- [ ] Complete Contacts list view
-- [ ] Implement basic CRUD operations
-- [ ] Setup authentication flow
+### Current focus (synced 2026-02-15)
+- [x] Harden P0 security baseline: RBAC + audit coverage for AI/settings/SCIM
+- [x] Complete AI security checklist (tenant isolation, rate limit, prompt validation, usage tracking)
+- [x] Validate MCP runtime essentials (PostgreSQL, Supabase, Tavily)
+- [ ] Finalize GitHub PAT and verify GitHub MCP end-to-end
+- [ ] Continue converting remaining `v1/partial` stories to production-complete acceptance
 
-### This Sprint
-- [ ] Full Contacts module
-- [ ] Activity timeline
-- [ ] Basic search and filters
+### Sprint planning reference
+- Use EPIC and SP breakdown in `docs/JIRA_BACKLOG_PLAN.md`
+- Keep this master plan for architecture/strategy; do not duplicate execution checklist here
 
 ---
 

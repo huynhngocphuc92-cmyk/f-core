@@ -2,7 +2,7 @@
 
 > Version: 1.0
 > Feature Name: **F-CORE Copilot** (tuong tu HubSpot ChatSpot / Breeze)
-> Status: PLANNING
+> Status: PHASE 1 + SECURITY HARDENING IMPLEMENTED (roadmap ben duoi giu lai cho Phase 2+)
 
 ---
 
@@ -16,9 +16,11 @@ Tich hop tro ly AI vao F-CORE CRM, giup nguoi dung:
 - Goi y hanh dong tiep theo cho deals/contacts
 
 ### Hien trang
-- **AI infrastructure:** CHUA CO (zero dependencies, zero code)
-- **Chat hien tai:** Chi la live chat visitor↔agent (KHONG lien quan)
+- **AI infrastructure:** DA CO (`/api/ai/chat`, `/api/ai/conversations`, Prisma AI models, tool registry)
+- **Chat hien tai:** Da co trang `/ai-assistant` su dung `useChat` + stream response
 - **CRM data:** Day du (Contact, Company, Deal, Activity, Pipeline, Workflow...)
+- **Hardening da xong:** RBAC (`ai.use`), rate-limit theo user, prompt-injection validation, audit logs, token usage tracking
+- **Roadmap con lai:** Agent workflows nang cao, observability chi tiet hon, va E2E end-to-end cho AI actions
 
 ---
 
@@ -395,13 +397,13 @@ AI_RATE_LIMIT_PER_HOUR=100         # Rate limit per user
 
 ## X. SECURITY CHECKLIST
 
-- [ ] Moi AI query PHAI filter theo `tenant_id`
-- [ ] Tool calling KHONG duoc truy cap data ngoai tenant
-- [ ] Rate limiting theo user (tranh abuse/chi phi)
-- [ ] Audit log khi AI tao/sua records
-- [ ] Input validation chong prompt injection
-- [ ] KHONG gui PII vao system prompt (chi gui khi user hoi)
-- [ ] Token usage tracking de monitor chi phi
+- [x] Moi AI query PHAI filter theo `tenant_id`
+- [x] Tool calling KHONG duoc truy cap data ngoai tenant
+- [x] Rate limiting theo user (tranh abuse/chi phi)
+- [x] Audit log khi AI tao/sua records
+- [x] Input validation chong prompt injection
+- [x] KHONG gui PII vao system prompt (chi gui khi user hoi)
+- [x] Token usage tracking de monitor chi phi
 
 ---
 

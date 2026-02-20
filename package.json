@@ -11,6 +11,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:ai-evals": "vitest run tests/ai-evals/ai-eval-harness.test.ts",
+    "test:security": "vitest run tests/api-security.test.ts",
+    "release:checklist": "npm run test && npm run test:security && npm run test:ai-evals && npm run build",
     "test:e2e": "playwright test"
   },
   "dependencies": {

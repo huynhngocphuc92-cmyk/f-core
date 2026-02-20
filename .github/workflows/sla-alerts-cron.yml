@@ -1,0 +1,36 @@
+name: SLA Alerts Cron
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run in dry-run mode"
+        required: false
+        default: "false"
+
+jobs:
+  trigger-sla-alerts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger cron endpoint
+        env:
+          SLA_CRON_URL: ${{ secrets.SLA_CRON_URL }}
+          SLA_CRON_SECRET: ${{ secrets.SLA_CRON_SECRET }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          if [ -z "$SLA_CRON_URL" ] || [ -z "$SLA_CRON_SECRET" ]; then
+            echo "Missing SLA_CRON_URL or SLA_CRON_SECRET secret"
+            exit 1
+          fi
+
+          URL="$SLA_CRON_URL"
+          if [ "$DRY_RUN" = "true" ]; then
+            URL="${SLA_CRON_URL}?dryRun=true"
+          fi
+
+          curl --fail --show-error --silent \
+            -X POST \
+            -H "Authorization: Bearer $SLA_CRON_SECRET" \
+            "$URL"

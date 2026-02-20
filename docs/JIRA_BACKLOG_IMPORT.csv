@@ -1,0 +1,59 @@
+Issue Type,Summary,Description,Priority,Story Points,Epic Name,Epic Link,Labels
+Epic,EPIC-01 Platform Enterprise Foundation,"Enterprise security and identity foundation: SSO, SCIM, RBAC, audit, tenant policy",Highest,,Platform Enterprise Foundation,,hubspot-gap;phase-a;priority-p0
+Epic,EPIC-02 Service Hub Advanced,"Advanced service operations: omnichannel inbox, SLA, customer portal, survey, routing, analytics",Highest,,Service Hub Advanced,,hubspot-gap;phase-b;priority-p0
+Epic,EPIC-03 Sales Hub Advanced,"Advanced sales capabilities: forecasting, playbooks, docs tracking, call intelligence, coaching",High,,Sales Hub Advanced,,hubspot-gap;phase-b;priority-p1
+Epic,EPIC-04 Commerce Hub Billing,"Billing and subscription lifecycle management",High,,Commerce Hub Billing,,hubspot-gap;phase-d;priority-p1
+Epic,EPIC-05 Marketing Hub Advanced,"Ads/social/attribution/journey analytics/A-B testing",High,,Marketing Hub Advanced,,hubspot-gap;phase-c;priority-p1
+Epic,EPIC-06 Content Hub Full,"Blog/content workflows, SEO intelligence, approvals, content performance",Medium,,Content Hub Full,,hubspot-gap;phase-c;priority-p2
+Epic,EPIC-07 Operations/Data Hub Full,"Data sync, quality, lineage, field mapping, runtime governance",High,,Operations/Data Hub Full,,hubspot-gap;phase-a;priority-p1
+Epic,EPIC-08 AI Breeze Agents v2,"Agent orchestration and domain agents with eval and governance",High,,AI Breeze Agents v2,,hubspot-gap;phase-d;priority-p1
+Epic,EPIC-09 Quality Performance Security Hardening,"E2E, security regression, perf budgets, release gates",Highest,,Quality Performance Security Hardening,,hubspot-gap;continuous;priority-p0
+Story,PLAT-01 Implement SSO login flow (SAML/OIDC gateway),Admin can enforce SSO-only login and users authenticate via IdP,Highest,8,Platform Enterprise Foundation,EPIC-01 Platform Enterprise Foundation,hubspot-gap;phase-a;priority-p0
+Story,PLAT-02 Add SCIM user provisioning sync endpoint,Create update deactivate users from IdP events,High,8,Platform Enterprise Foundation,EPIC-01 Platform Enterprise Foundation,hubspot-gap;phase-a;priority-p1
+Story,PLAT-03 Introduce granular RBAC permission matrix,Permissions enforce module action level checks on API and UI,Highest,8,Platform Enterprise Foundation,EPIC-01 Platform Enterprise Foundation,hubspot-gap;phase-a;priority-p0
+Story,PLAT-04 Add audit trail expansion for admin security events,Security events queryable with actor timestamp and context,High,5,Platform Enterprise Foundation,EPIC-01 Platform Enterprise Foundation,hubspot-gap;phase-a;priority-p1
+Story,PLAT-05 Tenant-level policy settings (session password IP allowlist),Tenant admins can configure org-wide access policy,Medium,5,Platform Enterprise Foundation,EPIC-01 Platform Enterprise Foundation,hubspot-gap;phase-a;priority-p2
+Story,SERV-01 Build omnichannel inbox abstraction,Unified queue view supports email chat channels,Highest,8,Service Hub Advanced,EPIC-02 Service Hub Advanced,hubspot-gap;phase-b;priority-p0
+Story,SERV-02 Add SLA policy engine and breach tracking,SLA timers and breach status visible in ticket views,Highest,8,Service Hub Advanced,EPIC-02 Service Hub Advanced,hubspot-gap;phase-b;priority-p0
+Story,SERV-03 Build customer portal for ticket updates,External contacts can create view reply tickets with scoped access,High,8,Service Hub Advanced,EPIC-02 Service Hub Advanced,hubspot-gap;phase-b;priority-p1
+Story,SERV-04 Add CSAT NPS survey workflows,Survey triggers after resolution and aggregates on dashboard,High,5,Service Hub Advanced,EPIC-02 Service Hub Advanced,hubspot-gap;phase-b;priority-p1
+Story,SERV-05 Add inbox routing and assignment rules,Rule-based assignment by team priority and business hours,High,5,Service Hub Advanced,EPIC-02 Service Hub Advanced,hubspot-gap;phase-b;priority-p1
+Story,SERV-06 Service analytics dashboard v2,SLA CSAT team performance dashboards with filters,Medium,5,Service Hub Advanced,EPIC-02 Service Hub Advanced,hubspot-gap;phase-b;priority-p2
+Story,SALES-01 Revenue forecasting engine (stage-weighted + trend),Forecast supports monthly quarterly views and confidence bands,High,8,Sales Hub Advanced,EPIC-03 Sales Hub Advanced,hubspot-gap;phase-b;priority-p1
+Story,SALES-02 Sales playbooks with guided steps,Reps launch contextual playbooks from deal contact records,High,5,Sales Hub Advanced,EPIC-03 Sales Hub Advanced,hubspot-gap;phase-b;priority-p1
+Story,SALES-03 Document tracking and engagement events,View signed download events linked to timeline,High,8,Sales Hub Advanced,EPIC-03 Sales Hub Advanced,hubspot-gap;phase-b;priority-p1
+Story,SALES-04 Call recording transcription pipeline,Calls generate transcript and searchable snippets,Medium,8,Sales Hub Advanced,EPIC-03 Sales Hub Advanced,hubspot-gap;phase-b;priority-p2
+Story,SALES-05 Coaching insights and action suggestions,Managers get risk signals and coaching cues by rep,Medium,5,Sales Hub Advanced,EPIC-03 Sales Hub Advanced,hubspot-gap;phase-b;priority-p2
+Story,COMM-01 Payment provider abstraction and configuration,Supports test live modes and credential rotation,High,5,Commerce Hub Billing,EPIC-04 Commerce Hub Billing,hubspot-gap;phase-d;priority-p1
+Story,COMM-02 Invoice generation and lifecycle states,Draft sent paid void lifecycle with safe transitions,High,8,Commerce Hub Billing,EPIC-04 Commerce Hub Billing,hubspot-gap;phase-d;priority-p1
+Story,COMM-03 Subscription and recurring billing engine,Plans cycles renewals cancellation workflows supported,High,8,Commerce Hub Billing,EPIC-04 Commerce Hub Billing,hubspot-gap;phase-d;priority-p1
+Story,COMM-04 Dunning workflow for failed payments,Retry schedule and customer notifications configurable,Medium,5,Commerce Hub Billing,EPIC-04 Commerce Hub Billing,hubspot-gap;phase-d;priority-p2
+Story,COMM-05 Revenue reporting integration,Finance reports reconcile invoices subscriptions and payments,Medium,5,Commerce Hub Billing,EPIC-04 Commerce Hub Billing,hubspot-gap;phase-d;priority-p2
+Story,MKT-01 Ads campaign management connectors,Campaign sync and spend metrics available in UI,High,8,Marketing Hub Advanced,EPIC-05 Marketing Hub Advanced,hubspot-gap;phase-c;priority-p1
+Story,MKT-02 Social publishing scheduler and monitoring,Multi-channel calendar with post status tracking,High,8,Marketing Hub Advanced,EPIC-05 Marketing Hub Advanced,hubspot-gap;phase-c;priority-p1
+Story,MKT-03 Attribution model service (first/last/multi-touch),Attribution reports selectable by model and date range,High,8,Marketing Hub Advanced,EPIC-05 Marketing Hub Advanced,hubspot-gap;phase-c;priority-p1
+Story,MKT-04 Customer journey analytics timeline,Journey map visualizes channel to conversion path,Medium,8,Marketing Hub Advanced,EPIC-05 Marketing Hub Advanced,hubspot-gap;phase-c;priority-p2
+Story,MKT-05 A/B testing framework for landing pages and emails,Experiment setup and winner evaluation supported,Medium,5,Marketing Hub Advanced,EPIC-05 Marketing Hub Advanced,hubspot-gap;phase-c;priority-p2
+Story,MKT-06 Marketing analytics workspace v2,Consolidated KPIs with drill-down filtering,Medium,5,Marketing Hub Advanced,EPIC-05 Marketing Hub Advanced,hubspot-gap;phase-c;priority-p2
+Story,CONT-01 Blog and article management module,Create edit publish schedule posts with authoring workflow,Medium,8,Content Hub Full,EPIC-06 Content Hub Full,hubspot-gap;phase-c;priority-p2
+Story,CONT-02 SEO recommendations service,On-page SEO score and actionable suggestions by asset,Medium,8,Content Hub Full,EPIC-06 Content Hub Full,hubspot-gap;phase-c;priority-p2
+Story,CONT-03 Content approval workflow,Reviewer approval gates before publish for configured spaces,Medium,5,Content Hub Full,EPIC-06 Content Hub Full,hubspot-gap;phase-c;priority-p2
+Story,CONT-04 Content remix reuse assistant,Generate repurposed variants from approved source content,Medium,5,Content Hub Full,EPIC-06 Content Hub Full,hubspot-gap;phase-c;priority-p2
+Story,CONT-05 Performance dashboard for content assets,Views leads conversions by asset and channel,Medium,5,Content Hub Full,EPIC-06 Content Hub Full,hubspot-gap;phase-c;priority-p2
+Story,CONT-06 Website page management enhancements,Structured sections templates and reusable blocks,Medium,5,Content Hub Full,EPIC-06 Content Hub Full,hubspot-gap;phase-c;priority-p2
+Story,DATA-01 Bi-directional sync framework for external systems,Import export mapping with conflict-safe synchronization,High,8,Operations/Data Hub Full,EPIC-07 Operations/Data Hub Full,hubspot-gap;phase-a;priority-p1
+Story,DATA-02 Deduplication and data-quality rule engine,Duplicate detection and merge workflow with audit trail,High,8,Operations/Data Hub Full,EPIC-07 Operations/Data Hub Full,hubspot-gap;phase-a;priority-p1
+Story,DATA-03 Data lineage and job observability,Sync jobs expose trace retry and failure diagnostics,Medium,5,Operations/Data Hub Full,EPIC-07 Operations/Data Hub Full,hubspot-gap;phase-c;priority-p2
+Story,DATA-04 Field mapping UI and transformation rules,Admin maps schema with validation and transform functions,High,8,Operations/Data Hub Full,EPIC-07 Operations/Data Hub Full,hubspot-gap;phase-a;priority-p1
+Story,DATA-05 Programmable automation runtime improvements,Workflow runtime supports retries dead-letter and versioning,Medium,5,Operations/Data Hub Full,EPIC-07 Operations/Data Hub Full,hubspot-gap;phase-c;priority-p2
+Story,AI-01 Agent orchestration layer (planner + tools + memory),Multi-step tool plans with policy guardrails,High,8,AI Breeze Agents v2,EPIC-08 AI Breeze Agents v2,hubspot-gap;phase-d;priority-p1
+Story,AI-02 Sales agent (deal coaching forecast insights),Sales prompts produce actionable explainable outputs,High,8,AI Breeze Agents v2,EPIC-08 AI Breeze Agents v2,hubspot-gap;phase-d;priority-p1
+Story,AI-03 Service agent (ticket triage suggested replies),Agent proposes triage and draft reply with confidence score,High,8,AI Breeze Agents v2,EPIC-08 AI Breeze Agents v2,hubspot-gap;phase-d;priority-p1
+Story,AI-04 Knowledge agent (search + answer grounding),Answers cite KB sources and handle missing info safely,High,5,AI Breeze Agents v2,EPIC-08 AI Breeze Agents v2,hubspot-gap;phase-d;priority-p1
+Story,AI-05 AI evaluation harness (quality latency cost),Regression benchmarks run in CI for agent flows,High,5,AI Breeze Agents v2,EPIC-08 AI Breeze Agents v2,hubspot-gap;phase-d;priority-p1
+Story,AI-06 Prompt version governance and rollback,Prompt versions tracked with rollback capability,Medium,5,AI Breeze Agents v2,EPIC-08 AI Breeze Agents v2,hubspot-gap;phase-d;priority-p2
+Story,QA-01 Expand E2E suite for critical business flows,End-to-end paths cover CRM service sales marketing happy paths,Highest,8,Quality Performance Security Hardening,EPIC-09 Quality Performance Security Hardening,hubspot-gap;continuous;priority-p0
+Story,QA-02 Add API performance budgets and alerting,P95 latency and error budgets visible and alertable,High,5,Quality Performance Security Hardening,EPIC-09 Quality Performance Security Hardening,hubspot-gap;continuous;priority-p1
+Story,QA-03 Security regression suite and policy checks,Authz tenant isolation injection checks block release on fail,Highest,5,Quality Performance Security Hardening,EPIC-09 Quality Performance Security Hardening,hubspot-gap;continuous;priority-p0
+Story,QA-04 Frontend performance optimization pass,Lighthouse thresholds met on key routes,Medium,5,Quality Performance Security Hardening,EPIC-09 Quality Performance Security Hardening,hubspot-gap;continuous;priority-p2
+Story,QA-05 Release readiness checklist automation,Pre-release pipeline enforces quality and security gates,Medium,3,Quality Performance Security Hardening,EPIC-09 Quality Performance Security Hardening,hubspot-gap;continuous;priority-p2
