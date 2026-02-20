@@ -79,6 +79,45 @@ model Tenant {
   savedViews      SavedView[]
   sequences       Sequence[]
   quotes          Quote[]
+  quoteApprovalRequests QuoteApprovalRequest[]
+  quoteBuyerActivities QuoteBuyerActivity[]
+  commerceInvoices CommerceInvoice[]
+  commerceSubscriptions CommerceSubscription[]
+  commerceDunningConfigs CommerceDunningConfig[]
+  commerceDunningCases CommerceDunningCase[]
+  commercePaymentProviders CommercePaymentProviderConfig[]
+  marketingAdsConnectors MarketingAdsConnector[]
+  marketingAdsCampaigns MarketingAdsCampaign[]
+  marketingSocialPosts MarketingSocialPost[]
+  marketingExperiments MarketingExperiment[]
+  dataSyncMappings DataSyncMapping[]
+  dataSyncJobs DataSyncJob[]
+  dataQualityRules DataQualityRule[]
+  dataQualityMergeAudits DataQualityMergeAudit[]
+  workflowVersionSnapshots WorkflowVersionSnapshot[]
+  workflowRuntimeRuns WorkflowRuntimeRun[]
+  workflowRuntimeDeadLetters WorkflowRuntimeDeadLetter[]
+  contentBlogPosts ContentBlogPost[]
+  contentApprovalPolicies ContentApprovalPolicy[]
+  contentApprovalRequests ContentApprovalRequest[]
+  contentRemixVariants ContentRemixVariant[]
+  contentPerformanceEvents ContentPerformanceEvent[]
+  contentReusableBlocks ContentReusableBlock[]
+  salesPlaybookRuns SalesPlaybookRun[]
+  aiPromptVersions AiPromptVersion[]
+  aiOrchestrationMemories AiOrchestrationMemory[]
+  apiPerformanceBudgets ApiPerformanceBudget[]
+  apiPerformanceEvaluations ApiPerformanceEvaluation[]
+  frontendRouteThresholds FrontendRouteThreshold[]
+  frontendPerformanceEvaluations FrontendPerformanceEvaluation[]
+  releaseChecklistGates ReleaseChecklistGate[]
+  releaseReadinessResults ReleaseReadinessResult[]
+  serviceSlaPolicyConfig ServiceSlaPolicyConfig?
+  serviceRoutingPolicyConfig ServiceRoutingPolicyConfig?
+  serviceOmnichannelThreads ServiceOmnichannelThread[]
+  ssoConfig SsoConfig?
+  tenantPolicy TenantPolicy?
+  scimUsers ScimUser[]
   landingPages    LandingPage[]
   chatWidgets     ChatWidget[]
   chatConversations ChatConversation[]
@@ -1110,6 +1149,14 @@ model Quote {
 
   sentAt          DateTime?
   approvedAt      DateTime?
+  approvalStatus  String    @default("not_requested") // not_requested, pending, approved, rejected
+  approvalRequestedAt DateTime?
+  approvalDecidedAt DateTime?
+  approvalDecidedBy String?
+  eSignStatus     String    @default("not_sent") // not_sent, sent, viewed, signed, declined
+  eSignSentAt     DateTime?
+  eSignCompletedAt DateTime?
+  buyerLastActivityAt DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?
@@ -1120,6 +1167,9 @@ model Quote {
   contact         Contact?  @relation(fields: [contactId], references: [id])
   company         Company?  @relation(fields: [companyId], references: [id])
   lineItems       QuoteLineItem[]
+  invoices        CommerceInvoice[]
+  approvalRequests QuoteApprovalRequest[]
+  buyerActivities QuoteBuyerActivity[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -1146,6 +1196,822 @@ model QuoteLineItem {
   quote       Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
 
   @@index([quoteId])
+}
+
+model QuoteApprovalRequest {
+  id              String    @id @default(uuid())
+  tenantId        String
+  quoteId         String
+  requestedBy     String?
+  requestedAt     DateTime  @default(now())
+  status          String    @default("pending") // pending, approved, rejected
+  decisionBy      String?
+  decisionAt      DateTime?
+  note            String?   @db.Text
+  metadata        Json      @default("{}")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  quote           Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([quoteId, requestedAt(sort: Desc)])
+  @@index([tenantId, quoteId, status])
+}
+
+model QuoteBuyerActivity {
+  id              String    @id @default(uuid())
+  tenantId        String
+  quoteId         String
+  type            String
+  actorType       String    @default("buyer") // buyer, internal, system
+  actorName       String?
+  actorEmail      String?
+  metadata        Json      @default("{}")
+  occurredAt      DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  quote           Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([quoteId, occurredAt(sort: Desc)])
+  @@index([tenantId, quoteId, type])
+}
+
+model CommerceInvoice {
+  id              String    @id @default(uuid())
+  tenantId        String
+  quoteId         String?
+
+  invoiceNumber   String
+  customerName    String
+  amount          Decimal   @db.Decimal(15, 2)
+  currency        String    @default("USD")
+  status          String    @default("draft") // draft, sent, paid, void
+  notes           String?   @db.Text
+
+  issuedAt        DateTime?
+  dueDate         DateTime?
+  paidAt          DateTime?
+  voidedAt        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  quote           Quote?    @relation(fields: [quoteId], references: [id])
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([quoteId])
+}
+
+model CommerceSubscription {
+  id                  String    @id @default(uuid())
+  tenantId            String
+
+  subscriptionNumber  String
+  customerName        String
+  planName            String
+  amount              Decimal   @db.Decimal(15, 2)
+  currency            String    @default("USD")
+  cycle               String    @default("monthly") // monthly, quarterly, yearly
+  status              String    @default("active") // active, past_due, canceled
+  cancelAtPeriodEnd   Boolean   @default(false)
+  cancellationReason  String?
+  canceledAt          DateTime?
+  currentPeriodStart  DateTime
+  currentPeriodEnd    DateTime
+  nextBillingAt       DateTime?
+  renewalCount        Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  tenant              Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, subscriptionNumber])
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model CommerceDunningConfig {
+  id                    String    @id @default(uuid())
+  tenantId              String
+  retryDelaysHours      Json      @default("[]")
+  maxRetries            Int       @default(3)
+  cancelAfterMaxRetries Boolean   @default(true)
+  notifyChannels        Json      @default("{}")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  tenant                Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId])
+  @@index([tenantId])
+}
+
+model CommerceDunningCase {
+  id            String    @id @default(uuid())
+  tenantId      String
+  subscriptionId String?
+  invoiceId     String?
+  customerName  String
+  amount        Decimal   @db.Decimal(15, 2)
+  currency      String    @default("USD")
+  status        String    @default("open") // open, recovered, canceled
+  attemptCount  Int       @default(1)
+  maxRetries    Int       @default(3)
+  nextRetryAt   DateTime?
+  lastAttemptAt DateTime?
+  history       Json      @default("[]")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([subscriptionId])
+  @@index([invoiceId])
+}
+
+model CommercePaymentProviderConfig {
+  id                     String    @id @default(uuid())
+  tenantId               String
+  provider               String
+  enabled                Boolean   @default(false)
+  mode                   String    @default("test")
+  credentials            Json      @default("{}")
+  version                Int       @default(1)
+  rotatedAt              DateTime?
+  lastVerificationStatus String?
+  lastVerificationError  String?
+  lastVerifiedAt         DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  tenant                 Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, provider])
+  @@index([tenantId])
+}
+
+model MarketingAdsConnector {
+  id                      String    @id @default(uuid())
+  tenantId                String
+  connectorId             String
+  name                    String
+  connected               Boolean   @default(false)
+  accountId               String?
+  status                  String    @default("disconnected") // connected, error, disconnected
+  dailyBudget             Decimal   @default(0) @db.Decimal(15, 2)
+  syncWindowDays          Int       @default(30)
+  note                    String?
+  authConfig              Json      @default("{}")
+  lastSyncedAt            DateTime?
+  lastSyncStatus          String?
+  lastSyncError           String?
+  lastSyncDurationMs      Int?
+  consecutiveSyncFailures Int       @default(0)
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  tenant                  Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, connectorId])
+  @@index([tenantId])
+}
+
+model MarketingAdsCampaign {
+  id                 String    @id @default(uuid())
+  tenantId           String
+  connectorId        String
+  externalCampaignId String
+  campaignName       String
+  status             String    // active, paused
+  spend              Decimal   @db.Decimal(15, 2)
+  impressions        Int
+  clicks             Int
+  leads              Int
+  syncedAt           DateTime
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  tenant             Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, connectorId, externalCampaignId])
+  @@index([tenantId])
+  @@index([tenantId, connectorId])
+  @@index([tenantId, syncedAt])
+}
+
+model MarketingSocialPost {
+  id            String    @id @default(uuid())
+  tenantId      String
+  title         String
+  content       String    @db.Text
+  channels      Json      @default("[]")
+  status        String    @default("draft") // draft, scheduled, published, failed, canceled
+  scheduledAt   DateTime?
+  publishedAt   DateTime?
+  failedAt      DateTime?
+  failureReason String?
+  tags          Json      @default("[]")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model MarketingExperiment {
+  id               String    @id @default(uuid())
+  tenantId         String
+  name             String
+  type             String
+  targetId         String
+  goal             String
+  status           String    @default("draft") // draft, running, paused, completed
+  winnerVariantKey String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  startedAt        DateTime?
+  endedAt          DateTime?
+
+  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+  variants         MarketingExperimentVariant[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, type])
+}
+
+model MarketingExperimentVariant {
+  id           String    @id @default(uuid())
+  experimentId String
+  key          String
+  name         String
+  trafficPct   Int
+  exposures    Int       @default(0)
+  conversions  Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  experiment   MarketingExperiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+
+  @@unique([experimentId, key])
+  @@index([experimentId])
+}
+
+model DataSyncMapping {
+  id                 String    @id @default(uuid())
+  tenantId           String
+  integration        String
+  objectType         String
+  direction          String
+  conflictResolution String
+  enabled            Boolean   @default(true)
+  fieldMappings      Json      @default("[]")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  tenant             Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, integration, objectType])
+  @@index([tenantId])
+  @@index([tenantId, integration])
+  @@index([tenantId, objectType])
+}
+
+model DataSyncJob {
+  id               String    @id @default(uuid())
+  tenantId         String
+  mappingId        String
+  integration      String
+  objectType       String
+  direction        String
+  status           String
+  dryRun           Boolean   @default(true)
+  attempt          Int       @default(1)
+  retriedFromJobId String?
+  processed        Int       @default(0)
+  imported         Int       @default(0)
+  exported         Int       @default(0)
+  skipped          Int       @default(0)
+  conflicts        Int       @default(0)
+  conflictItems    Json      @default("[]")
+  diagnostics      Json      @default("[]")
+  traces           Json      @default("[]")
+  lineage          Json      @default("[]")
+  sourceRecords    Json      @default("[]")
+  startedAt        DateTime
+  completedAt      DateTime
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, mappingId])
+  @@index([tenantId, status])
+  @@index([tenantId, startedAt])
+}
+
+model DataQualityRule {
+  id                String    @id @default(uuid())
+  tenantId          String
+  objectType        String
+  requireEmail      Boolean   @default(false)
+  requirePhone      Boolean   @default(false)
+  requireDomain     Boolean   @default(false)
+  minNameLength     Int       @default(2)
+  autoMergeExactKey Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  tenant            Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, objectType])
+  @@index([tenantId])
+}
+
+model DataQualityMergeAudit {
+  id          String    @id @default(uuid())
+  tenantId    String
+  objectType  String
+  primaryId   String
+  duplicateId String
+  mergedBy    String
+  dryRun      Boolean   @default(true)
+  fieldsMerged Json     @default("[]")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, objectType])
+  @@index([tenantId, createdAt])
+}
+
+model ApiPerformanceBudget {
+  id               String    @id @default(uuid())
+  tenantId         String
+  endpoint         String
+  maxP95LatencyMs  Int
+  maxErrorRatePct  Float
+  enabled          Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, endpoint])
+  @@index([tenantId])
+  @@index([tenantId, endpoint])
+}
+
+model ApiPerformanceEvaluation {
+  id               String    @id @default(uuid())
+  tenantId         String
+  checkedEndpoints Int
+  breachedEndpoints Int
+  passRatePct      Float
+  alerts           Json      @default("[]")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+}
+
+model FrontendRouteThreshold {
+  id         String    @id @default(uuid())
+  tenantId   String
+  route      String
+  maxLcpMs   Int
+  maxInpMs   Int
+  maxCls     Float
+  maxJsKb    Int
+  enabled    Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  tenant     Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, route])
+  @@index([tenantId])
+  @@index([tenantId, route])
+}
+
+model FrontendPerformanceEvaluation {
+  id             String    @id @default(uuid())
+  tenantId       String
+  checkedRoutes  Int
+  breachedRoutes Int
+  passRatePct    Float
+  alerts         Json      @default("[]")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+}
+
+model ReleaseChecklistGate {
+  id         String    @id @default(uuid())
+  tenantId   String
+  gateId     String
+  name       String
+  command    String
+  required   Boolean   @default(true)
+  enabled    Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  tenant     Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, gateId])
+  @@index([tenantId])
+}
+
+model ReleaseReadinessResult {
+  id                String    @id @default(uuid())
+  tenantId          String
+  releaseTag        String?
+  branch            String?
+  actor             String?
+  status            String
+  requiredGateCount Int
+  requiredPassCount Int
+  requiredFailCount Int
+  scorePct          Int
+  gates             Json      @default("[]")
+  blockers          Json      @default("[]")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  tenant            Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+}
+
+model ContentBlogPost {
+  id          String    @id @default(uuid())
+  tenantId    String
+  title       String
+  slug        String
+  excerpt     String?
+  content     String
+  status      String
+  authorId    String
+  reviewerId  String?
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, updatedAt])
+}
+
+model ContentApprovalPolicy {
+  id                String    @id @default(uuid())
+  tenantId          String
+  space             String
+  enabled           Boolean   @default(false)
+  requiredApprovals Int       @default(1)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  tenant            Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, space])
+  @@index([tenantId])
+}
+
+model ContentApprovalRequest {
+  id           String    @id @default(uuid())
+  tenantId     String
+  space        String
+  assetId      String
+  assetTitle   String
+  assetUpdatedAt DateTime
+  status       String
+  requestedBy  String
+  reviewerId   String?
+  decisionNote String?
+  requestNote  String?
+  requestedAt  DateTime
+  decidedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, space, status])
+  @@index([tenantId, space, assetId])
+  @@index([tenantId, updatedAt])
+}
+
+model ContentRemixVariant {
+  id          String    @id @default(uuid())
+  tenantId    String
+  sourceType  String
+  sourceId    String
+  sourceTitle String
+  targetFormat String
+  tone        String
+  content     String    @db.Text
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, sourceType, sourceId])
+  @@index([tenantId, targetFormat])
+  @@index([tenantId, createdAt])
+}
+
+model ContentPerformanceEvent {
+  id          String    @id @default(uuid())
+  tenantId    String
+  sourceType  String
+  sourceId    String
+  channel     String
+  eventType   String
+  occurredAt  DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, sourceType, sourceId])
+  @@index([tenantId, channel])
+  @@index([tenantId, occurredAt])
+}
+
+model ContentReusableBlock {
+  id          String    @id @default(uuid())
+  tenantId    String
+  name        String
+  sectionType String
+  headline    String
+  body        String    @db.Text
+  ctaLabel    String?
+  ctaUrl      String?
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, sectionType])
+  @@index([tenantId, updatedAt])
+}
+
+model SalesPlaybookRun {
+  id          String    @id @default(uuid())
+  tenantId    String
+  dealId      String
+  templateId  String
+  status      String
+  startedAt   DateTime
+  completedAt DateTime?
+  steps       Json      @default("[]")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, dealId])
+  @@index([tenantId, status])
+  @@index([tenantId, startedAt])
+}
+
+model WorkflowVersionSnapshot {
+  id         String    @id @default(uuid())
+  tenantId   String
+  workflowId String
+  version    Int
+  label      String
+  snapshot   Json      @default("{}")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  tenant     Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, workflowId, version])
+  @@index([tenantId])
+  @@index([tenantId, workflowId])
+}
+
+model WorkflowRuntimeRun {
+  id           String    @id @default(uuid())
+  tenantId     String
+  workflowId   String
+  status       String
+  maxRetries   Int
+  versionId    String?
+  payload      Json      @default("{}")
+  attempts     Json      @default("[]")
+  retriesUsed  Int       @default(0)
+  deadLetterId String?
+  startedAt    DateTime
+  completedAt  DateTime
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, workflowId])
+  @@index([tenantId, status])
+  @@index([tenantId, startedAt])
+}
+
+model WorkflowRuntimeDeadLetter {
+  id          String    @id @default(uuid())
+  tenantId    String
+  workflowId  String
+  runId       String
+  reason      String
+  payload     Json      @default("{}")
+  attempts    Int
+  latestError String
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, runId])
+  @@index([tenantId])
+  @@index([tenantId, workflowId])
+  @@index([tenantId, resolvedAt])
+  @@index([tenantId, createdAt])
+}
+
+model AiPromptVersion {
+  id        String    @id @default(uuid())
+  tenantId  String
+  agent     String
+  version   Int
+  label     String
+  prompt    String    @db.Text
+  isActive  Boolean   @default(false)
+  createdBy String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, agent, version])
+  @@index([tenantId])
+  @@index([tenantId, agent])
+  @@index([tenantId, agent, isActive])
+}
+
+model AiOrchestrationMemory {
+  id             String    @id @default(uuid())
+  tenantId       String
+  conversationId String
+  intents        Json      @default("[]")
+  facts          Json      @default("[]")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, conversationId])
+  @@index([tenantId])
+  @@index([tenantId, updatedAt])
+}
+
+model ServiceSlaPolicyConfig {
+  id          String    @id @default(uuid())
+  tenantId    String    @unique
+  policy      Json      @default("{}")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
+
+model ServiceRoutingPolicyConfig {
+  id          String    @id @default(uuid())
+  tenantId    String    @unique
+  policy      Json      @default("{}")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
+
+model ServiceOmnichannelThread {
+  id              String    @id @default(uuid())
+  tenantId        String
+  channel         String
+  externalThreadId String?
+  subject         String
+  status          String    @default("open")
+  priority        String?
+  assigneeId      String?
+  contactName     String?
+  contactEmail    String?
+  messagePreview  String?
+  metadata        Json      @default("{}")
+  lastMessageAt   DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, channel, status])
+  @@index([tenantId, updatedAt])
+}
+
+model SsoConfig {
+  id            String    @id @default(uuid())
+  tenantId      String    @unique
+  tenantSlug    String
+  enabled       Boolean   @default(true)
+  ssoOnly       Boolean   @default(false)
+  provider      String
+  idpDisplayName String
+  connectionId  String
+  entryPointUrl String
+  domains       String[]  @default([])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant        Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantSlug])
+}
+
+model TenantPolicy {
+  id                String    @id @default(uuid())
+  tenantId          String    @unique
+  tenantSlug        String
+  session           Json      @default("{}")
+  password          Json      @default("{}")
+  ipAllowlistEnabled Boolean  @default(false)
+  ipAllowlistEntries String[] @default([])
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  tenant            Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantSlug])
+}
+
+model ScimUser {
+  id          String    @id @default(uuid())
+  tenantId    String
+  externalId  String?
+  userName    String
+  active      Boolean   @default(true)
+  displayName String
+  givenName   String?
+  familyName  String?
+  emails      Json      @default("[]")
+  roles       Json      @default("[]")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, userName])
+  @@index([tenantId, externalId])
 }
 
 // ============================================
