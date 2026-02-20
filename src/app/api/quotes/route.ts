@@ -8,6 +8,7 @@ import {
   paginatedResponse,
   handleApiError,
 } from "@/lib/api-helpers";
+import { logAuditEvent } from "@/lib/audit-helpers";
 import { z } from "zod";
 
 const lineItemSchema = z.object({
@@ -137,6 +138,19 @@ export async function POST(request: NextRequest) {
         company: { select: { id: true, name: true } },
         deal: { select: { id: true, name: true } },
         lineItems: { orderBy: { orderIndex: "asc" } },
+      },
+    });
+
+    await logAuditEvent({
+      request,
+      action: "created",
+      entity: "quote",
+      entityId: quote.id,
+      entityName: quote.title,
+      changes: {
+        status: quote.status,
+        lineItemCount: quote.lineItems.length,
+        total: String(quote.total),
       },
     });
 

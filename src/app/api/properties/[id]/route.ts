@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getTenantId, checkOwnership } from "@/lib/auth-helpers";
+import { getTenantId, checkOwnership, checkPermission } from "@/lib/auth-helpers";
 import { handleApiError } from "@/lib/api-helpers";
+import { logAuditEvent } from "@/lib/audit-helpers";
 import { z } from "zod";
 
 const updatePropertySchema = z.object({
@@ -21,6 +22,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await checkPermission("settings.read", request);
     const { id } = await params;
     await getTenantId(request);
 
@@ -49,6 +51,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await checkPermission("settings.manage", request);
     const { id } = await params;
     await getTenantId(request);
     const body = await request.json();
@@ -83,6 +86,17 @@ export async function PATCH(
       },
     });
 
+    await logAuditEvent({
+      request,
+      action: "updated",
+      entity: "property_definition",
+      entityId: property.id,
+      entityName: property.label,
+      changes: {
+        updatedFields: Object.keys(data),
+      },
+    });
+
     return NextResponse.json(property);
   } catch (error) {
     return handleApiError(error);
@@ -95,6 +109,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await checkPermission("settings.manage", request);
     const { id } = await params;
     await getTenantId(request);
 
@@ -119,6 +134,18 @@ export async function DELETE(
     }
 
     await prisma.propertyDefinition.delete({ where: { id } });
+
+    await logAuditEvent({
+      request,
+      action: "deleted",
+      entity: "property_definition",
+      entityId: existing.id,
+      entityName: existing.label,
+      metadata: {
+        objectType: existing.objectType,
+        fieldType: existing.fieldType,
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

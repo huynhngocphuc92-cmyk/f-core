@@ -1,19 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getUserData } from "@/lib/auth-helpers";
+import { checkPermission, getUserData } from "@/lib/auth-helpers";
 import { handleApiError } from "@/lib/api-helpers";
-
-async function getOrFallbackUser() {
-  try {
-    return await getUserData();
-  } catch {
-    const user = await prisma.user.findFirst({
-      select: { id: true, email: true, name: true, tenantId: true, role: true },
-    });
-    if (!user) throw new Error("No users in database");
-    return user;
-  }
-}
 
 // GET /api/ai/conversations/[id] - Get conversation with messages
 export async function GET(
@@ -21,7 +9,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const userData = await getOrFallbackUser();
+    const userData = await getUserData(request);
+    await checkPermission("ai.use", request);
     const { id } = await params;
 
     const conversation = await prisma.aIConversation.findFirst({
@@ -65,7 +54,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const userData = await getOrFallbackUser();
+    const userData = await getUserData(request);
+    await checkPermission("ai.use", request);
     const { id } = await params;
 
     const conversation = await prisma.aIConversation.findFirst({

@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getTenantId, checkOwnership } from "@/lib/auth-helpers";
 import { handleApiError } from "@/lib/api-helpers";
+import { logAuditEvent } from "@/lib/audit-helpers";
+import { getSlaPolicy } from "@/lib/sla-policy-store";
+import { computeTicketDueDate, withTicketSla } from "@/lib/sla-helpers";
+import { hasSurveyBeenSentForTicket } from "@/lib/service-survey";
+import { issueCustomerPortalToken } from "@/lib/customer-portal-token";
 import { z } from "zod";
 
 const updateTicketSchema = z.object({
@@ -48,8 +53,8 @@ export async function GET(
     }
 
     await checkOwnership(ticket.tenantId, request);
-
-    return NextResponse.json(ticket);
+    const slaPolicy = await getSlaPolicy(ticket.tenantId);
+    return NextResponse.json(withTicketSla(ticket, new Date(), slaPolicy));
   } catch (error) {
     return handleApiError(error);
   }
@@ -78,6 +83,7 @@ export async function PATCH(
     }
 
     await checkOwnership(existing.tenantId, request);
+    const slaPolicy = await getSlaPolicy(existing.tenantId);
 
     // Handle status change timestamps
     const statusData: Record<string, Date | null> = {};
@@ -87,6 +93,19 @@ export async function PATCH(
     if (data.status === "closed" && existing.status !== "closed") {
       statusData.closedAt = new Date();
     }
+    if (
+      data.status &&
+      data.status !== "open" &&
+      !existing.firstResponseAt
+    ) {
+      statusData.firstResponseAt = new Date();
+    }
+
+    const nextPriority = data.priority ?? existing.priority;
+    const shouldAutoRecalculateDueDate =
+      data.dueDate === undefined &&
+      data.priority !== undefined &&
+      existing.dueDate === null;
 
     const ticket = await prisma.ticket.update({
       where: { id },
@@ -104,6 +123,9 @@ export async function PATCH(
         ...(data.dueDate !== undefined && {
           dueDate: data.dueDate ? new Date(data.dueDate) : null,
         }),
+        ...(shouldAutoRecalculateDueDate && {
+          dueDate: computeTicketDueDate(existing.createdAt, nextPriority, slaPolicy),
+        }),
         ...(data.tags !== undefined && { tags: data.tags }),
         ...statusData,
       },
@@ -117,7 +139,65 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json(ticket);
+    await logAuditEvent({
+      request,
+      action: "updated",
+      entity: "ticket",
+      entityId: ticket.id,
+      entityName: ticket.subject,
+      changes: {
+        updatedFields: Object.keys(data),
+        status: ticket.status,
+      },
+    });
+
+    if (data.status === "resolved" && existing.status !== "resolved" && ticket.contactId) {
+      const [contact, recentSurveyActivities] = await Promise.all([
+        prisma.contact.findFirst({
+          where: { id: ticket.contactId, tenantId: ticket.tenantId, deletedAt: null },
+          select: { id: true, email: true },
+        }),
+        prisma.activity.findMany({
+          where: {
+            tenantId: ticket.tenantId,
+            contactId: ticket.contactId,
+            type: "note",
+          },
+          select: { metadata: true },
+          orderBy: { createdAt: "desc" },
+          take: 500,
+        }),
+      ]);
+
+      if (contact?.email && !hasSurveyBeenSentForTicket(recentSurveyActivities, ticket.id)) {
+        const { token } = issueCustomerPortalToken({
+          tenantId: ticket.tenantId,
+          contactId: contact.id,
+          email: contact.email,
+          expiresInMinutes: 60 * 24 * 7,
+        });
+        const portalPath = `/portal/tickets/${ticket.id}?token=${encodeURIComponent(token)}`;
+
+        await prisma.activity.create({
+          data: {
+            tenantId: ticket.tenantId,
+            type: "note",
+            contactId: contact.id,
+            subject: "CSAT/NPS survey sent",
+            body: "Survey invitation triggered after ticket resolution.",
+            metadata: {
+              source: "service_survey",
+              status: "sent",
+              workflow: "ticket_resolved",
+              ticketId: ticket.id,
+              portalPath,
+            },
+          },
+        });
+      }
+    }
+
+    return NextResponse.json(withTicketSla(ticket, new Date(), slaPolicy));
   } catch (error) {
     return handleApiError(error);
   }
@@ -148,6 +228,17 @@ export async function DELETE(
     await prisma.ticket.update({
       where: { id },
       data: { deletedAt: new Date() },
+    });
+
+    await logAuditEvent({
+      request,
+      action: "deleted",
+      entity: "ticket",
+      entityId: existing.id,
+      entityName: existing.subject,
+      metadata: {
+        status: existing.status,
+      },
     });
 
     return NextResponse.json({ success: true });

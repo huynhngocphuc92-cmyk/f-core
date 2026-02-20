@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getTenantId, checkOwnership } from "@/lib/auth-helpers";
+import { getTenantId, checkOwnership, checkPermission } from "@/lib/auth-helpers";
 import { handleApiError } from "@/lib/api-helpers";
+import { logAuditEvent } from "@/lib/audit-helpers";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
@@ -18,6 +19,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await checkPermission("settings.read", request);
     const { id } = await params;
     await getTenantId(request);
 
@@ -49,6 +51,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await checkPermission("settings.manage", request);
     const { id } = await params;
     await getTenantId(request);
     const body = await request.json();
@@ -82,6 +85,17 @@ export async function PATCH(
       },
     });
 
+    await logAuditEvent({
+      request,
+      action: "updated",
+      entity: "webhook",
+      entityId: webhook.id,
+      entityName: webhook.name,
+      changes: {
+        updatedFields: Object.keys(data),
+      },
+    });
+
     return NextResponse.json(webhook);
   } catch (error) {
     return handleApiError(error);
@@ -94,6 +108,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await checkPermission("settings.manage", request);
     const { id } = await params;
     await getTenantId(request);
 
@@ -112,6 +127,17 @@ export async function DELETE(
 
     await prisma.webhook.delete({
       where: { id },
+    });
+
+    await logAuditEvent({
+      request,
+      action: "deleted",
+      entity: "webhook",
+      entityId: existing.id,
+      entityName: existing.name,
+      metadata: {
+        eventCount: Array.isArray(existing.events) ? existing.events.length : 0,
+      },
     });
 
     return NextResponse.json({ success: true });

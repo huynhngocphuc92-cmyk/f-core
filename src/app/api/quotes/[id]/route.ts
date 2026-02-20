@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getTenantId, checkOwnership } from "@/lib/auth-helpers";
 import { handleApiError } from "@/lib/api-helpers";
+import { logAuditEvent } from "@/lib/audit-helpers";
 import { z } from "zod";
 
 const lineItemSchema = z.object({
@@ -47,6 +48,14 @@ export async function GET(
         company: { select: { id: true, name: true } },
         deal: { select: { id: true, name: true } },
         lineItems: { orderBy: { orderIndex: "asc" } },
+        approvalRequests: {
+          orderBy: { requestedAt: "desc" },
+          take: 25,
+        },
+        buyerActivities: {
+          orderBy: { occurredAt: "desc" },
+          take: 100,
+        },
       },
     });
 
@@ -160,6 +169,27 @@ export async function PATCH(
         company: { select: { id: true, name: true } },
         deal: { select: { id: true, name: true } },
         lineItems: { orderBy: { orderIndex: "asc" } },
+        approvalRequests: {
+          orderBy: { requestedAt: "desc" },
+          take: 25,
+        },
+        buyerActivities: {
+          orderBy: { occurredAt: "desc" },
+          take: 100,
+        },
+      },
+    });
+
+    await logAuditEvent({
+      request,
+      action: "updated",
+      entity: "quote",
+      entityId: quote.id,
+      entityName: quote.title,
+      changes: {
+        updatedFields: Object.keys(data),
+        status: quote.status,
+        total: String(quote.total),
       },
     });
 
@@ -194,6 +224,17 @@ export async function DELETE(
     await prisma.quote.update({
       where: { id },
       data: { deletedAt: new Date() },
+    });
+
+    await logAuditEvent({
+      request,
+      action: "deleted",
+      entity: "quote",
+      entityId: existing.id,
+      entityName: existing.title,
+      metadata: {
+        status: existing.status,
+      },
     });
 
     return NextResponse.json({ success: true });

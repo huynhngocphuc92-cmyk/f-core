@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getTenantId, checkOwnership } from "@/lib/auth-helpers";
 import { handleApiError } from "@/lib/api-helpers";
+import { logAuditEvent } from "@/lib/audit-helpers";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
@@ -108,6 +109,19 @@ export async function PATCH(
       },
     });
 
+    await logAuditEvent({
+      request,
+      action: "updated",
+      entity: "workflow",
+      entityId: workflow.id,
+      entityName: workflow.name,
+      changes: {
+        updatedFields: Object.keys(data),
+        status: workflow.status,
+        isActive: workflow.isActive,
+      },
+    });
+
     return NextResponse.json(workflow);
   } catch (error) {
     return handleApiError(error);
@@ -139,6 +153,17 @@ export async function DELETE(
     await prisma.workflow.update({
       where: { id },
       data: { deletedAt: new Date(), isActive: false, status: "draft" },
+    });
+
+    await logAuditEvent({
+      request,
+      action: "deleted",
+      entity: "workflow",
+      entityId: existing.id,
+      entityName: existing.name,
+      metadata: {
+        previousStatus: existing.status,
+      },
     });
 
     return NextResponse.json({ success: true });

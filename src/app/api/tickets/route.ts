@@ -7,6 +7,10 @@ import {
   paginatedResponse,
   handleApiError,
 } from "@/lib/api-helpers";
+import { logAuditEvent } from "@/lib/audit-helpers";
+import { getSlaPolicy } from "@/lib/sla-policy-store";
+import { computeTicketDueDate, withTicketSla } from "@/lib/sla-helpers";
+import { resolveTicketAssignment } from "@/lib/service-routing-store";
 import { z } from "zod";
 
 const createTicketSchema = z.object({
@@ -54,6 +58,7 @@ export async function GET(request: NextRequest) {
     };
 
     const where = buildWhereClause(tenantId, additionalWhere);
+    const slaPolicy = await getSlaPolicy(tenantId);
 
     const [tickets, total] = await Promise.all([
       prisma.ticket.findMany({
@@ -73,7 +78,12 @@ export async function GET(request: NextRequest) {
       prisma.ticket.count({ where }),
     ]);
 
-    return paginatedResponse(tickets, total, page, limit);
+    return paginatedResponse(
+      tickets.map((ticket) => withTicketSla(ticket, new Date(), slaPolicy)),
+      total,
+      page,
+      limit
+    );
   } catch (error) {
     return handleApiError(error);
   }
@@ -86,6 +96,27 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser(request);
     const body = await request.json();
     const data = createTicketSchema.parse(body);
+    const slaPolicy = await getSlaPolicy(tenantId);
+    const routingUsers = await prisma.user.findMany({
+      where: { tenantId, deletedAt: null },
+      select: {
+        id: true,
+        role: true,
+        availability: {
+          where: { isActive: true },
+          select: { dayOfWeek: true, startTime: true, endTime: true },
+        },
+      },
+      take: 200,
+    });
+    const routing = await resolveTicketAssignment({
+      tenantId,
+      priority: data.priority || "medium",
+      source: data.source || "web",
+      explicitAssigneeId: data.assigneeId,
+      users: routingUsers,
+    });
+    const assigneeId = data.assigneeId || routing.assigneeId;
 
     const ticket = await prisma.ticket.create({
       data: {
@@ -97,9 +128,11 @@ export async function POST(request: NextRequest) {
         source: data.source,
         contactId: data.contactId,
         companyId: data.companyId,
-        assigneeId: data.assigneeId,
+        assigneeId,
         createdById: user.id,
-        dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
+        dueDate: data.dueDate
+          ? new Date(data.dueDate)
+          : computeTicketDueDate(new Date(), data.priority || "medium", slaPolicy),
         tags: data.tags,
       },
       include: {
@@ -112,7 +145,22 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(ticket, { status: 201 });
+    await logAuditEvent({
+      request,
+      action: "created",
+      entity: "ticket",
+      entityId: ticket.id,
+      entityName: ticket.subject,
+      changes: {
+        status: ticket.status,
+        priority: ticket.priority,
+        source: ticket.source,
+        assignmentReason: routing.reason,
+        assignmentTeamId: routing.teamId,
+      },
+    });
+
+    return NextResponse.json(withTicketSla(ticket, new Date(), slaPolicy), { status: 201 });
   } catch (error) {
     return handleApiError(error);
   }

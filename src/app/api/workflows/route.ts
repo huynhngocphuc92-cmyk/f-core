@@ -7,6 +7,7 @@ import {
   paginatedResponse,
   handleApiError,
 } from "@/lib/api-helpers";
+import { logAuditEvent } from "@/lib/audit-helpers";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
@@ -102,6 +103,18 @@ export async function POST(request: NextRequest) {
       },
       include: {
         owner: { select: { id: true, name: true } },
+      },
+    });
+
+    await logAuditEvent({
+      request,
+      action: "created",
+      entity: "workflow",
+      entityId: workflow.id,
+      entityName: workflow.name,
+      changes: {
+        triggerType: workflow.triggerType,
+        isActive: workflow.isActive,
       },
     });
 

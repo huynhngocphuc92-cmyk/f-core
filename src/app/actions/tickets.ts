@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
+import { getSlaPolicy } from "@/lib/sla-policy-store";
+import { computeTicketDueDate, withTicketSla } from "@/lib/sla-helpers";
+import { resolveTicketAssignment } from "@/lib/service-routing-store";
 
 async function getTenantId(): Promise<string> {
   const tenant = await prisma.tenant.findFirst();
@@ -26,8 +29,9 @@ export async function getTickets(filters?: {
   priority?: string;
 }) {
   const tenantId = await getTenantId();
+  const slaPolicy = await getSlaPolicy(tenantId);
 
-  return prisma.ticket.findMany({
+  const tickets = await prisma.ticket.findMany({
     where: {
       tenantId,
       deletedAt: null,
@@ -54,11 +58,14 @@ export async function getTickets(filters?: {
     orderBy: { createdAt: "desc" },
     take: 100,
   });
+
+  return tickets.map((ticket) => withTicketSla(ticket, new Date(), slaPolicy));
 }
 
 export async function getTicket(id: string) {
   const tenantId = await getTenantId();
-  return prisma.ticket.findFirst({
+  const slaPolicy = await getSlaPolicy(tenantId);
+  const ticket = await prisma.ticket.findFirst({
     where: { id, tenantId, deletedAt: null },
     include: {
       assignee: { select: { id: true, name: true, email: true } },
@@ -67,10 +74,13 @@ export async function getTicket(id: string) {
       company: { select: { id: true, name: true } },
     },
   });
+
+  return ticket ? withTicketSla(ticket, new Date(), slaPolicy) : null;
 }
 
 export async function createTicket(formData: FormData): Promise<void> {
   const tenantId = await getTenantId();
+  const slaPolicy = await getSlaPolicy(tenantId);
   const userId = await getDefaultUserId();
 
   const subject = formData.get("subject") as string;
@@ -85,6 +95,25 @@ export async function createTicket(formData: FormData): Promise<void> {
     throw new Error("Subject is required");
   }
 
+  const routingUsers = await prisma.user.findMany({
+    where: { tenantId, deletedAt: null },
+    select: {
+      id: true,
+      role: true,
+      availability: {
+        where: { isActive: true },
+        select: { dayOfWeek: true, startTime: true, endTime: true },
+      },
+    },
+    take: 200,
+  });
+  const routing = await resolveTicketAssignment({
+    tenantId,
+    priority: priority as "low" | "medium" | "high" | "urgent",
+    source: source as "email" | "phone" | "web" | "chat",
+    users: routingUsers,
+  });
+
   const ticket = await prisma.ticket.create({
     data: {
       tenantId,
@@ -96,7 +125,8 @@ export async function createTicket(formData: FormData): Promise<void> {
       contactId: contactId || undefined,
       companyId: companyId || undefined,
       createdById: userId,
-      assigneeId: userId,
+      assigneeId: routing.assigneeId || userId,
+      dueDate: computeTicketDueDate(new Date(), priority, slaPolicy),
     },
   });
 

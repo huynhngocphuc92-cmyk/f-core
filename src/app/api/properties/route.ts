@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getTenantId } from "@/lib/auth-helpers";
+import { getTenantId, checkPermission } from "@/lib/auth-helpers";
 import {
   validatePagination,
   buildWhereClause,
   paginatedResponse,
   handleApiError,
 } from "@/lib/api-helpers";
+import { logAuditEvent } from "@/lib/audit-helpers";
 import { z } from "zod";
 
 const createPropertySchema = z.object({
@@ -41,6 +42,7 @@ const createPropertySchema = z.object({
 // GET /api/properties - List property definitions
 export async function GET(request: NextRequest) {
   try {
+    await checkPermission("settings.read", request);
     const tenantId = await getTenantId(request);
     const { page, limit, skip } = validatePagination(
       request.nextUrl.searchParams
@@ -77,6 +79,7 @@ export async function GET(request: NextRequest) {
 // POST /api/properties - Create a property definition
 export async function POST(request: NextRequest) {
   try {
+    await checkPermission("settings.manage", request);
     const tenantId = await getTenantId(request);
     const body = await request.json();
     const data = createPropertySchema.parse(body);
@@ -125,6 +128,19 @@ export async function POST(request: NextRequest) {
         groupName: data.groupName || "Custom Properties",
         orderIndex: (maxOrder?.orderIndex ?? -1) + 1,
         defaultValue: data.defaultValue,
+      },
+    });
+
+    await logAuditEvent({
+      request,
+      action: "created",
+      entity: "property_definition",
+      entityId: property.id,
+      entityName: property.label,
+      changes: {
+        objectType: property.objectType,
+        fieldType: property.fieldType,
+        groupName: property.groupName,
       },
     });
 

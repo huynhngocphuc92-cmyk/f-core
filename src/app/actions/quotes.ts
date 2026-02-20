@@ -2,12 +2,25 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 
 async function getTenantId(): Promise<string> {
   const tenant = await prisma.tenant.findFirst();
   if (!tenant) throw new Error("No tenant found");
   return tenant.id;
+}
+
+async function getTenantIdOrNull(): Promise<string | null> {
+  const tenant = await prisma.tenant.findFirst();
+  return tenant?.id ?? null;
+}
+
+function isSchemaDriftError(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    (error.code === "P2021" || error.code === "P2022")
+  );
 }
 
 // ============================================
@@ -18,59 +31,132 @@ export async function getQuotes(filters?: {
   search?: string;
   status?: string;
 }) {
-  const tenantId = await getTenantId();
+  const tenantId = await getTenantIdOrNull();
+  if (!tenantId) {
+    return [];
+  }
 
-  const quotes = await prisma.quote.findMany({
-    where: {
-      tenantId,
-      deletedAt: null,
-      ...(filters?.status && filters.status !== "all"
-        ? { status: filters.status }
-        : {}),
-      ...(filters?.search
-        ? {
-            OR: [
-              { title: { contains: filters.search, mode: "insensitive" as const } },
-              { notes: { contains: filters.search, mode: "insensitive" as const } },
-            ],
-          }
-        : {}),
-    },
-    include: {
-      contact: { select: { id: true, firstName: true, lastName: true, email: true } },
-      company: { select: { id: true, name: true } },
-      deal: { select: { id: true, name: true } },
-      owner: { select: { id: true, name: true, email: true } },
-      lineItems: { orderBy: { orderIndex: "asc" } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
-
-  return quotes.map((q) => ({
-    id: q.id,
-    quoteNumber: q.quoteNumber,
-    title: q.title,
-    status: q.status,
-    expiresAt: q.expiresAt ? q.expiresAt.toISOString() : null,
-    subtotal: Number(q.subtotal),
-    discount: Number(q.discount),
-    tax: Number(q.tax),
-    total: Number(q.total),
-    currency: q.currency,
-    sentAt: q.sentAt ? q.sentAt.toISOString() : null,
-    approvedAt: q.approvedAt ? q.approvedAt.toISOString() : null,
-    createdAt: q.createdAt.toISOString(),
-    contact: q.contact
+  const whereClause = {
+    tenantId,
+    deletedAt: null,
+    ...(filters?.status && filters.status !== "all"
+      ? { status: filters.status }
+      : {}),
+    ...(filters?.search
       ? {
-          id: q.contact.id,
-          name: [q.contact.firstName, q.contact.lastName].filter(Boolean).join(" ") || q.contact.email || "Unnamed",
+          OR: [
+            { title: { contains: filters.search, mode: "insensitive" as const } },
+            { notes: { contains: filters.search, mode: "insensitive" as const } },
+          ],
         }
-      : null,
-    company: q.company ? { id: q.company.id, name: q.company.name } : null,
-    deal: q.deal ? { id: q.deal.id, name: q.deal.name } : null,
-    owner: q.owner ? { id: q.owner.id, name: q.owner.name || q.owner.email } : null,
-  }));
+      : {}),
+  };
+
+  try {
+    const quotes = await prisma.quote.findMany({
+      where: whereClause,
+      include: {
+        contact: { select: { id: true, firstName: true, lastName: true, email: true } },
+        company: { select: { id: true, name: true } },
+        deal: { select: { id: true, name: true } },
+        owner: { select: { id: true, name: true, email: true } },
+        lineItems: { orderBy: { orderIndex: "asc" } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+
+    return quotes.map((q) => ({
+      id: q.id,
+      quoteNumber: q.quoteNumber,
+      title: q.title,
+      status: q.status,
+      approvalStatus: q.approvalStatus,
+      eSignStatus: q.eSignStatus,
+      expiresAt: q.expiresAt ? q.expiresAt.toISOString() : null,
+      subtotal: Number(q.subtotal),
+      discount: Number(q.discount),
+      tax: Number(q.tax),
+      total: Number(q.total),
+      currency: q.currency,
+      sentAt: q.sentAt ? q.sentAt.toISOString() : null,
+      approvedAt: q.approvedAt ? q.approvedAt.toISOString() : null,
+      buyerLastActivityAt: q.buyerLastActivityAt ? q.buyerLastActivityAt.toISOString() : null,
+      createdAt: q.createdAt.toISOString(),
+      contact: q.contact
+        ? {
+            id: q.contact.id,
+            name:
+              [q.contact.firstName, q.contact.lastName].filter(Boolean).join(" ") ||
+              q.contact.email ||
+              "Unnamed",
+          }
+        : null,
+      company: q.company ? { id: q.company.id, name: q.company.name } : null,
+      deal: q.deal ? { id: q.deal.id, name: q.deal.name } : null,
+      owner: q.owner ? { id: q.owner.id, name: q.owner.name || q.owner.email } : null,
+    }));
+  } catch (error) {
+    if (!isSchemaDriftError(error)) {
+      throw error;
+    }
+
+    const legacyQuotes = await prisma.quote.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        quoteNumber: true,
+        title: true,
+        status: true,
+        expiresAt: true,
+        subtotal: true,
+        discount: true,
+        tax: true,
+        total: true,
+        currency: true,
+        sentAt: true,
+        approvedAt: true,
+        createdAt: true,
+        contact: { select: { id: true, firstName: true, lastName: true, email: true } },
+        company: { select: { id: true, name: true } },
+        deal: { select: { id: true, name: true } },
+        owner: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+
+    return legacyQuotes.map((q) => ({
+      id: q.id,
+      quoteNumber: q.quoteNumber,
+      title: q.title,
+      status: q.status,
+      approvalStatus: "not_requested",
+      eSignStatus: "not_sent",
+      expiresAt: q.expiresAt ? q.expiresAt.toISOString() : null,
+      subtotal: Number(q.subtotal),
+      discount: Number(q.discount),
+      tax: Number(q.tax),
+      total: Number(q.total),
+      currency: q.currency,
+      sentAt: q.sentAt ? q.sentAt.toISOString() : null,
+      approvedAt: q.approvedAt ? q.approvedAt.toISOString() : null,
+      buyerLastActivityAt: null,
+      createdAt: q.createdAt.toISOString(),
+      contact: q.contact
+        ? {
+            id: q.contact.id,
+            name:
+              [q.contact.firstName, q.contact.lastName].filter(Boolean).join(" ") ||
+              q.contact.email ||
+              "Unnamed",
+          }
+        : null,
+      company: q.company ? { id: q.company.id, name: q.company.name } : null,
+      deal: q.deal ? { id: q.deal.id, name: q.deal.name } : null,
+      owner: q.owner ? { id: q.owner.id, name: q.owner.name || q.owner.email } : null,
+    }));
+  }
 }
 
 // ============================================
@@ -78,7 +164,10 @@ export async function getQuotes(filters?: {
 // ============================================
 
 export async function getQuoteStats() {
-  const tenantId = await getTenantId();
+  const tenantId = await getTenantIdOrNull();
+  if (!tenantId) {
+    return { total: 0, draft: 0, pending: 0, approved: 0, totalValue: 0 };
+  }
 
   const [total, draft, pending, approved, quotes] = await Promise.all([
     prisma.quote.count({ where: { tenantId, deletedAt: null } }),
@@ -101,73 +190,228 @@ export async function getQuoteStats() {
 // ============================================
 
 export async function getQuote(id: string) {
-  const tenantId = await getTenantId();
+  const tenantId = await getTenantIdOrNull();
+  if (!tenantId) {
+    return null;
+  }
 
-  const quote = await prisma.quote.findFirst({
-    where: { id, tenantId, deletedAt: null },
-    include: {
-      contact: { select: { id: true, firstName: true, lastName: true, email: true } },
-      company: { select: { id: true, name: true, domain: true } },
-      deal: { select: { id: true, name: true, amount: true, currency: true } },
-      owner: { select: { id: true, name: true, email: true } },
-      lineItems: { orderBy: { orderIndex: "asc" } },
-    },
-  });
+  try {
+    const quote = await prisma.quote.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      include: {
+        contact: { select: { id: true, firstName: true, lastName: true, email: true } },
+        company: { select: { id: true, name: true, domain: true } },
+        deal: { select: { id: true, name: true, amount: true, currency: true } },
+        owner: { select: { id: true, name: true, email: true } },
+        lineItems: { orderBy: { orderIndex: "asc" } },
+        approvalRequests: {
+          orderBy: { requestedAt: "desc" },
+          take: 25,
+        },
+        buyerActivities: {
+          orderBy: { occurredAt: "desc" },
+          take: 100,
+        },
+      },
+    });
 
-  if (!quote) return null;
+    if (!quote) return null;
 
-  return {
-    id: quote.id,
-    quoteNumber: quote.quoteNumber,
-    title: quote.title,
-    status: quote.status,
-    expiresAt: quote.expiresAt ? quote.expiresAt.toISOString() : null,
-    subtotal: Number(quote.subtotal),
-    discount: Number(quote.discount),
-    tax: Number(quote.tax),
-    total: Number(quote.total),
-    currency: quote.currency,
-    notes: quote.notes,
-    terms: quote.terms,
-    paymentTerms: quote.paymentTerms,
-    sentAt: quote.sentAt ? quote.sentAt.toISOString() : null,
-    approvedAt: quote.approvedAt ? quote.approvedAt.toISOString() : null,
-    createdAt: quote.createdAt.toISOString(),
-    updatedAt: quote.updatedAt.toISOString(),
-    contact: quote.contact
-      ? {
-          id: quote.contact.id,
-          firstName: quote.contact.firstName,
-          lastName: quote.contact.lastName,
-          email: quote.contact.email,
-          name: [quote.contact.firstName, quote.contact.lastName].filter(Boolean).join(" ") || quote.contact.email || "Unnamed",
-        }
-      : null,
-    company: quote.company
-      ? { id: quote.company.id, name: quote.company.name, domain: quote.company.domain }
-      : null,
-    deal: quote.deal
-      ? {
-          id: quote.deal.id,
-          name: quote.deal.name,
-          amount: quote.deal.amount ? Number(quote.deal.amount) : null,
-          currency: quote.deal.currency,
-        }
-      : null,
-    owner: quote.owner
-      ? { id: quote.owner.id, name: quote.owner.name || quote.owner.email }
-      : null,
-    lineItems: quote.lineItems.map((li) => ({
-      id: li.id,
-      name: li.name,
-      description: li.description,
-      quantity: li.quantity,
-      unitPrice: Number(li.unitPrice),
-      discount: Number(li.discount),
-      total: Number(li.total),
-      orderIndex: li.orderIndex,
-    })),
-  };
+    return {
+      id: quote.id,
+      quoteNumber: quote.quoteNumber,
+      title: quote.title,
+      status: quote.status,
+      approvalStatus: quote.approvalStatus,
+      approvalRequestedAt: quote.approvalRequestedAt ? quote.approvalRequestedAt.toISOString() : null,
+      approvalDecidedAt: quote.approvalDecidedAt ? quote.approvalDecidedAt.toISOString() : null,
+      approvalDecidedBy: quote.approvalDecidedBy,
+      eSignStatus: quote.eSignStatus,
+      eSignSentAt: quote.eSignSentAt ? quote.eSignSentAt.toISOString() : null,
+      eSignCompletedAt: quote.eSignCompletedAt ? quote.eSignCompletedAt.toISOString() : null,
+      buyerLastActivityAt: quote.buyerLastActivityAt ? quote.buyerLastActivityAt.toISOString() : null,
+      expiresAt: quote.expiresAt ? quote.expiresAt.toISOString() : null,
+      subtotal: Number(quote.subtotal),
+      discount: Number(quote.discount),
+      tax: Number(quote.tax),
+      total: Number(quote.total),
+      currency: quote.currency,
+      notes: quote.notes,
+      terms: quote.terms,
+      paymentTerms: quote.paymentTerms,
+      sentAt: quote.sentAt ? quote.sentAt.toISOString() : null,
+      approvedAt: quote.approvedAt ? quote.approvedAt.toISOString() : null,
+      createdAt: quote.createdAt.toISOString(),
+      updatedAt: quote.updatedAt.toISOString(),
+      contact: quote.contact
+        ? {
+            id: quote.contact.id,
+            firstName: quote.contact.firstName,
+            lastName: quote.contact.lastName,
+            email: quote.contact.email,
+            name:
+              [quote.contact.firstName, quote.contact.lastName].filter(Boolean).join(" ") ||
+              quote.contact.email ||
+              "Unnamed",
+          }
+        : null,
+      company: quote.company
+        ? { id: quote.company.id, name: quote.company.name, domain: quote.company.domain }
+        : null,
+      deal: quote.deal
+        ? {
+            id: quote.deal.id,
+            name: quote.deal.name,
+            amount: quote.deal.amount ? Number(quote.deal.amount) : null,
+            currency: quote.deal.currency,
+          }
+        : null,
+      owner: quote.owner
+        ? { id: quote.owner.id, name: quote.owner.name || quote.owner.email }
+        : null,
+      lineItems: quote.lineItems.map((li) => ({
+        id: li.id,
+        name: li.name,
+        description: li.description,
+        quantity: li.quantity,
+        unitPrice: Number(li.unitPrice),
+        discount: Number(li.discount),
+        total: Number(li.total),
+        orderIndex: li.orderIndex,
+      })),
+      approvalRequests: quote.approvalRequests.map((request) => ({
+        id: request.id,
+        status: request.status,
+        requestedBy: request.requestedBy,
+        requestedAt: request.requestedAt.toISOString(),
+        decisionBy: request.decisionBy,
+        decisionAt: request.decisionAt ? request.decisionAt.toISOString() : null,
+        note: request.note,
+        metadata: request.metadata,
+      })),
+      buyerActivities: quote.buyerActivities.map((activity) => ({
+        id: activity.id,
+        type: activity.type,
+        actorType: activity.actorType,
+        actorName: activity.actorName,
+        actorEmail: activity.actorEmail,
+        occurredAt: activity.occurredAt.toISOString(),
+        metadata: activity.metadata,
+      })),
+    };
+  } catch (error) {
+    if (!isSchemaDriftError(error)) {
+      throw error;
+    }
+
+    const quote = await prisma.quote.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: {
+        id: true,
+        quoteNumber: true,
+        title: true,
+        status: true,
+        expiresAt: true,
+        subtotal: true,
+        discount: true,
+        tax: true,
+        total: true,
+        currency: true,
+        notes: true,
+        terms: true,
+        paymentTerms: true,
+        sentAt: true,
+        approvedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        contact: { select: { id: true, firstName: true, lastName: true, email: true } },
+        company: { select: { id: true, name: true, domain: true } },
+        deal: { select: { id: true, name: true, amount: true, currency: true } },
+        owner: { select: { id: true, name: true, email: true } },
+        lineItems: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            quantity: true,
+            unitPrice: true,
+            discount: true,
+            total: true,
+            orderIndex: true,
+          },
+          orderBy: { orderIndex: "asc" },
+        },
+      },
+    });
+
+    if (!quote) return null;
+
+    return {
+      id: quote.id,
+      quoteNumber: quote.quoteNumber,
+      title: quote.title,
+      status: quote.status,
+      approvalStatus: "not_requested",
+      approvalRequestedAt: null,
+      approvalDecidedAt: null,
+      approvalDecidedBy: null,
+      eSignStatus: "not_sent",
+      eSignSentAt: null,
+      eSignCompletedAt: null,
+      buyerLastActivityAt: null,
+      expiresAt: quote.expiresAt ? quote.expiresAt.toISOString() : null,
+      subtotal: Number(quote.subtotal),
+      discount: Number(quote.discount),
+      tax: Number(quote.tax),
+      total: Number(quote.total),
+      currency: quote.currency,
+      notes: quote.notes,
+      terms: quote.terms,
+      paymentTerms: quote.paymentTerms,
+      sentAt: quote.sentAt ? quote.sentAt.toISOString() : null,
+      approvedAt: quote.approvedAt ? quote.approvedAt.toISOString() : null,
+      createdAt: quote.createdAt.toISOString(),
+      updatedAt: quote.updatedAt.toISOString(),
+      contact: quote.contact
+        ? {
+            id: quote.contact.id,
+            firstName: quote.contact.firstName,
+            lastName: quote.contact.lastName,
+            email: quote.contact.email,
+            name:
+              [quote.contact.firstName, quote.contact.lastName].filter(Boolean).join(" ") ||
+              quote.contact.email ||
+              "Unnamed",
+          }
+        : null,
+      company: quote.company
+        ? { id: quote.company.id, name: quote.company.name, domain: quote.company.domain }
+        : null,
+      deal: quote.deal
+        ? {
+            id: quote.deal.id,
+            name: quote.deal.name,
+            amount: quote.deal.amount ? Number(quote.deal.amount) : null,
+            currency: quote.deal.currency,
+          }
+        : null,
+      owner: quote.owner
+        ? { id: quote.owner.id, name: quote.owner.name || quote.owner.email }
+        : null,
+      lineItems: quote.lineItems.map((li) => ({
+        id: li.id,
+        name: li.name,
+        description: li.description,
+        quantity: li.quantity,
+        unitPrice: Number(li.unitPrice),
+        discount: Number(li.discount),
+        total: Number(li.total),
+        orderIndex: li.orderIndex,
+      })),
+      approvalRequests: [],
+      buyerActivities: [],
+    };
+  }
 }
 
 // ============================================
