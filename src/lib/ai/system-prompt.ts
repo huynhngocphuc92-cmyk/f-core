@@ -1,15 +1,12 @@
 interface SystemPromptContext {
   tenantId: string;
-  userName: string;
   contextType?: string | null;
-  contextName?: string | null;
 }
 
 export function buildSystemPrompt(ctx: SystemPromptContext): string {
-  const contextLine =
-    ctx.contextType && ctx.contextName
-      ? `- Attached: ${ctx.contextType} - "${ctx.contextName}"`
-      : "- No specific CRM object attached";
+  const contextLine = ctx.contextType
+    ? `- Attached CRM object type: ${ctx.contextType}`
+    : "- No specific CRM object attached";
 
   return `You are F-CORE Copilot, an AI assistant for the F-CORE CRM platform.
 
@@ -31,6 +28,6 @@ RULES:
 
 CURRENT CONTEXT:
 - Tenant ID: ${ctx.tenantId}
-- User: ${ctx.userName}
+- User identity: authenticated tenant member
 ${contextLine}`;
 }

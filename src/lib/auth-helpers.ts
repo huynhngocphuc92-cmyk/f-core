@@ -3,6 +3,43 @@ import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 import prisma from './prisma';
 
+export type UserRole = 'admin' | 'manager' | 'member';
+
+export type Permission =
+  | 'settings.read'
+  | 'settings.manage'
+  | 'crm.read'
+  | 'crm.write'
+  | 'reports.read'
+  | 'reports.manage'
+  | 'ai.use';
+
+const ROLE_PERMISSIONS: Record<UserRole, Set<Permission>> = {
+  admin: new Set<Permission>([
+    'settings.read',
+    'settings.manage',
+    'crm.read',
+    'crm.write',
+    'reports.read',
+    'reports.manage',
+    'ai.use',
+  ]),
+  manager: new Set<Permission>([
+    'settings.read',
+    'crm.read',
+    'crm.write',
+    'reports.read',
+    'reports.manage',
+    'ai.use',
+  ]),
+  member: new Set<Permission>([
+    'crm.read',
+    'crm.write',
+    'reports.read',
+    'ai.use',
+  ]),
+};
+
 /**
  * Create a Supabase server client for API routes
  */
@@ -114,5 +151,24 @@ export async function checkRole(
     throw new Error('Forbidden: Insufficient permissions');
   }
   
+  return true;
+}
+
+/**
+ * Check if current user has a specific permission.
+ * @throws Error if user doesn't have the required permission
+ */
+export async function checkPermission(
+  permission: Permission,
+  request?: NextRequest
+): Promise<boolean> {
+  const userData = await getUserData(request);
+  const role = (userData.role || 'member') as UserRole;
+  const permissions = ROLE_PERMISSIONS[role];
+
+  if (!permissions || !permissions.has(permission)) {
+    throw new Error(`Forbidden: Missing permission ${permission}`);
+  }
+
   return true;
 }

@@ -1,6 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import prisma from "@/lib/prisma";
+import { logAuditEvent } from "@/lib/audit-helpers";
 
 export function activityTools(tenantId: string, userId: string) {
   return {
@@ -74,6 +75,21 @@ export function activityTools(tenantId: string, userId: string) {
             createdAt: true,
           },
         });
+
+        await logAuditEvent({
+          tenantId,
+          userId,
+          action: "created",
+          entity: "activity_note",
+          entityId: activity.id,
+          entityName: activity.subject ?? undefined,
+          metadata: {
+            source: "ai_tool",
+            tool: "create_note",
+            contactId,
+          },
+        });
+
         return {
           success: true,
           activity,
@@ -98,6 +114,16 @@ export function activityTools(tenantId: string, userId: string) {
           .describe("Task priority"),
       }),
       execute: async ({ title, dueDate, contactId, priority }) => {
+        if (contactId) {
+          const contact = await prisma.contact.findFirst({
+            where: { id: contactId, tenantId, deletedAt: null },
+            select: { id: true },
+          });
+          if (!contact) {
+            return { error: "Contact not found" };
+          }
+        }
+
         const activity = await prisma.activity.create({
           data: {
             tenantId,
@@ -118,6 +144,22 @@ export function activityTools(tenantId: string, userId: string) {
             createdAt: true,
           },
         });
+
+        await logAuditEvent({
+          tenantId,
+          userId,
+          action: "created",
+          entity: "activity_task",
+          entityId: activity.id,
+          entityName: activity.subject ?? undefined,
+          metadata: {
+            source: "ai_tool",
+            tool: "create_task",
+            contactId: contactId || null,
+            priority,
+          },
+        });
+
         return { success: true, task: activity };
       },
     }),
