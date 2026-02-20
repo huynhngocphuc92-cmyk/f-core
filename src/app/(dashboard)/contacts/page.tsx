@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import SearchInput from "@/components/crm/SearchInput";
 import ContactsTable from "@/components/crm/ContactsTable";
 import { Prisma } from "@prisma/client";
+import { getServerI18n } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ export default async function ContactsPage({
 }: {
   searchParams: Promise<{ search?: string }>;
 }) {
+  const { t } = await getServerI18n();
   const { search } = await searchParams;
   const contacts = await getContacts(search);
 
@@ -53,8 +55,14 @@ export default async function ContactsPage({
       {/* Page Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Contacts</h1>
-          <p className="text-gray-600 mt-1">{contacts.length} contacts</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {t("dashboard.contacts.title", "Contacts")}
+          </h1>
+          <p className="text-gray-600 mt-1">
+            {t("dashboard.contacts.countLabel", "{count} contacts", {
+              count: contacts.length,
+            })}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <Link
@@ -62,17 +70,22 @@ export default async function ContactsPage({
             className="flex items-center gap-2 px-4 py-2 bg-[#0891b2] text-white rounded-lg hover:bg-[#0ea5e9] transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Create contact
+            {t("dashboard.contacts.createContact", "Create contact")}
           </Link>
         </div>
       </div>
 
       {/* Filters Bar */}
       <div className="flex items-center gap-4 mb-6">
-        <SearchInput placeholder="Search contacts..." />
+        <SearchInput
+          placeholder={t(
+            "dashboard.contacts.searchPlaceholder",
+            "Search contacts..."
+          )}
+        />
         <button className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
           <Filter className="w-4 h-4" />
-          Filters
+          {t("dashboard.contacts.filters", "Filters")}
         </button>
       </div>
 

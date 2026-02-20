@@ -12,26 +12,51 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-export default function SettingsPage() {
+import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
+import { getServerI18n } from "@/i18n/server";
+
+export default async function SettingsPage() {
+  const { t } = await getServerI18n();
+
+  const notificationItems = [
+    {
+      key: "email",
+      icon: Mail,
+    },
+    {
+      key: "deals",
+      icon: Building2,
+    },
+    {
+      key: "assignments",
+      icon: User,
+    },
+  ];
+
   return (
-    <div className="p-6 pt-8 max-w-4xl">
-      {/* Page Header */}
+    <div className="max-w-4xl p-6 pt-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-1">
-          Manage your account and preferences
+        <h1 className="text-2xl font-bold text-gray-900">
+          {t("dashboard.settings.title", "Settings")}
+        </h1>
+        <p className="mt-1 text-gray-600">
+          {t(
+            "dashboard.settings.subtitle",
+            "Manage your account and preferences"
+          )}
         </p>
       </div>
 
       <div className="space-y-6">
-        {/* Profile Section */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <User className="w-5 h-5 text-[#0891b2]" />
-            <h2 className="text-lg font-semibold text-gray-900">Profile</h2>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center gap-3">
+            <User className="h-5 w-5 text-[#0891b2]" />
+            <h2 className="text-lg font-semibold text-gray-900">
+              {t("dashboard.settings.profile.sectionTitle", "Profile")}
+            </h2>
           </div>
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 rounded-full bg-[#0891b2] flex items-center justify-center text-white font-semibold text-xl">
+          <div className="mb-6 flex items-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#0891b2] text-xl font-semibold text-white">
               A
             </div>
             <div>
@@ -39,186 +64,223 @@ export default function SettingsPage() {
               <p className="text-sm text-gray-500">admin@f-core.com</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                First Name
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                {t("dashboard.settings.profile.firstName", "First Name")}
               </label>
               <input
                 type="text"
                 defaultValue="Admin"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2]"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#0891b2] focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Last Name
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                {t("dashboard.settings.profile.lastName", "Last Name")}
               </label>
               <input
                 type="text"
                 defaultValue="User"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2]"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#0891b2] focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                {t("dashboard.settings.profile.email", "Email")}
               </label>
               <input
                 type="email"
                 defaultValue="admin@f-core.com"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2]"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#0891b2] focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                {t("dashboard.settings.profile.phone", "Phone")}
               </label>
               <input
                 type="tel"
                 placeholder="+1 (555) 000-0000"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2]"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#0891b2] focus:outline-none"
               />
             </div>
           </div>
         </div>
 
-        {/* Notifications Section */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <Bell className="w-5 h-5 text-[#0891b2]" />
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center gap-3">
+            <Bell className="h-5 w-5 text-[#0891b2]" />
             <h2 className="text-lg font-semibold text-gray-900">
-              Notifications
+              {t("dashboard.settings.notifications.sectionTitle", "Notifications")}
             </h2>
           </div>
           <div className="space-y-4">
-            {[
-              {
-                label: "Email notifications",
-                desc: "Receive email alerts for important updates",
-                icon: Mail,
-              },
-              {
-                label: "Deal updates",
-                desc: "Get notified when deals change stages",
-                icon: Building2,
-              },
-              {
-                label: "New contact assignments",
-                desc: "Alerts when contacts are assigned to you",
-                icon: User,
-              },
-            ].map((item) => (
+            {notificationItems.map((item) => (
               <div
-                key={item.label}
-                className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0"
+                key={item.key}
+                className="flex items-center justify-between border-b border-gray-100 py-3 last:border-0"
               >
                 <div className="flex items-center gap-3">
-                  <item.icon className="w-4 h-4 text-gray-400" />
+                  <item.icon className="h-4 w-4 text-gray-400" />
                   <div>
                     <p className="text-sm font-medium text-gray-900">
-                      {item.label}
+                      {t(
+                        `dashboard.settings.notifications.${item.key}.label`,
+                        "Notification"
+                      )}
                     </p>
-                    <p className="text-xs text-gray-500">{item.desc}</p>
+                    <p className="text-xs text-gray-500">
+                      {t(
+                        `dashboard.settings.notifications.${item.key}.desc`,
+                        ""
+                      )}
+                    </p>
                   </div>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#0891b2]/30 rounded-full peer peer-checked:bg-[#0891b2] after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input type="checkbox" defaultChecked className="peer sr-only" />
+                  <div className="after:start-[2px] peer h-5 w-9 rounded-full bg-gray-200 after:absolute after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-[#0891b2] peer-checked:after:translate-x-full peer-focus:ring-2 peer-focus:ring-[#0891b2]/30" />
                 </label>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Security Section */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <Shield className="w-5 h-5 text-[#0891b2]" />
-            <h2 className="text-lg font-semibold text-gray-900">Security</h2>
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center gap-3">
+            <Shield className="h-5 w-5 text-[#0891b2]" />
+            <h2 className="text-lg font-semibold text-gray-900">
+              {t("dashboard.settings.security.sectionTitle", "Security")}
+            </h2>
           </div>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Key className="w-4 h-4 text-gray-400" />
+                <Key className="h-4 w-4 text-gray-400" />
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Password</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {t("dashboard.settings.security.password.label", "Password")}
+                  </p>
                   <p className="text-xs text-gray-500">
-                    Last changed 30 days ago
+                    {t(
+                      "dashboard.settings.security.password.desc",
+                      "Last changed 30 days ago"
+                    )}
                   </p>
                 </div>
               </div>
-              <button className="px-4 py-2 text-sm text-[#0891b2] border border-[#0891b2] rounded-lg hover:bg-[#0891b2]/5 transition-colors">
-                Change
+              <button className="rounded-lg border border-[#0891b2] px-4 py-2 text-sm text-[#0891b2] transition-colors hover:bg-[#0891b2]/5">
+                {t("dashboard.settings.security.password.action", "Change")}
               </button>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Shield className="w-4 h-4 text-gray-400" />
+                <Shield className="h-4 w-4 text-gray-400" />
                 <div>
                   <p className="text-sm font-medium text-gray-900">
-                    Two-factor authentication
+                    {t(
+                      "dashboard.settings.security.twoFactor.label",
+                      "Two-factor authentication"
+                    )}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Add an extra layer of security
+                    {t(
+                      "dashboard.settings.security.twoFactor.desc",
+                      "Add an extra layer of security"
+                    )}
                   </p>
                 </div>
               </div>
-              <button className="px-4 py-2 text-sm text-[#0891b2] border border-[#0891b2] rounded-lg hover:bg-[#0891b2]/5 transition-colors">
-                Enable
+              <button className="rounded-lg border border-[#0891b2] px-4 py-2 text-sm text-[#0891b2] transition-colors hover:bg-[#0891b2]/5">
+                {t("dashboard.settings.security.twoFactor.action", "Enable")}
               </button>
             </div>
+            <Link
+              href="/settings/sso"
+              className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-3 transition-colors hover:bg-gray-50"
+            >
+              <div className="flex items-center gap-3">
+                <Globe className="h-4 w-4 text-gray-400" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    {t(
+                      "dashboard.settings.security.sso.title",
+                      "Single Sign-On (SAML/OIDC)"
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {t(
+                      "dashboard.settings.security.sso.desc",
+                      "Configure IdP connection and enforce SSO-only login"
+                    )}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+            </Link>
+            <Link
+              href="/settings/policies"
+              className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-3 transition-colors hover:bg-gray-50"
+            >
+              <div className="flex items-center gap-3">
+                <SlidersHorizontal className="h-4 w-4 text-gray-400" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    {t(
+                      "dashboard.settings.security.policies.title",
+                      "Tenant Security Policies"
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {t(
+                      "dashboard.settings.security.policies.desc",
+                      "Session timeout, password rules, and IP allowlist"
+                    )}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+            </Link>
           </div>
         </div>
 
-        {/* Preferences Section */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <Palette className="w-5 h-5 text-[#0891b2]" />
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center gap-3">
+            <Palette className="h-5 w-5 text-[#0891b2]" />
             <h2 className="text-lg font-semibold text-gray-900">
-              Preferences
+              {t("dashboard.settings.preferences.sectionTitle", "Preferences")}
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Language
-              </label>
-              <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2] bg-white">
-                <option>English (US)</option>
-                <option>Vietnamese</option>
-                <option>Japanese</option>
-              </select>
+              <LanguageSwitcher className="h-full" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Timezone
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                {t("dashboard.settings.preferences.timezone", "Timezone")}
               </label>
-              <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2] bg-white">
+              <select className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-[#0891b2] focus:outline-none">
                 <option>UTC-5 (Eastern Time)</option>
                 <option>UTC+7 (Ho Chi Minh City)</option>
-                <option>UTC+9 (Tokyo)</option>
+                <option>UTC+1 (Berlin)</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date format
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                {t("dashboard.settings.preferences.dateFormat", "Date format")}
               </label>
-              <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2] bg-white">
+              <select className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-[#0891b2] focus:outline-none">
                 <option>MM/DD/YYYY</option>
                 <option>DD/MM/YYYY</option>
                 <option>YYYY-MM-DD</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Currency
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                {t("dashboard.settings.preferences.currency", "Currency")}
               </label>
-              <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2] bg-white">
+              <select className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-[#0891b2] focus:outline-none">
                 <option>USD ($)</option>
                 <option>VND (₫)</option>
                 <option>EUR (€)</option>
@@ -227,34 +289,40 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Data Management Section */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <SlidersHorizontal className="w-5 h-5 text-[#0891b2]" />
+        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center gap-3">
+            <SlidersHorizontal className="h-5 w-5 text-[#0891b2]" />
             <h2 className="text-lg font-semibold text-gray-900">
-              Data Management
+              {t("dashboard.settings.dataManagement.sectionTitle", "Data Management")}
             </h2>
           </div>
           <div className="space-y-1">
             <Link
               href="/settings/properties"
-              className="flex items-center justify-between py-3 px-3 rounded-lg hover:bg-gray-50 transition-colors group"
+              className="group flex items-center justify-between rounded-lg px-3 py-3 transition-colors hover:bg-gray-50"
             >
               <div>
-                <p className="text-sm font-medium text-gray-900">Properties</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {t(
+                    "dashboard.settings.dataManagement.properties.title",
+                    "Properties"
+                  )}
+                </p>
                 <p className="text-xs text-gray-500">
-                  Manage custom fields for contacts, companies, and deals
+                  {t(
+                    "dashboard.settings.dataManagement.properties.desc",
+                    "Manage custom fields for contacts, companies, and deals"
+                  )}
                 </p>
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-[#0891b2] transition-colors" />
+              <ChevronRight className="h-4 w-4 text-gray-400 transition-colors group-hover:text-[#0891b2]" />
             </Link>
           </div>
         </div>
 
-        {/* Save Button */}
         <div className="flex justify-end">
-          <button className="px-6 py-2.5 bg-[#0891b2] text-white rounded-lg hover:bg-[#0e7490] transition-colors text-sm font-medium">
-            Save changes
+          <button className="rounded-lg bg-[#0891b2] px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#0e7490]">
+            {t("dashboard.settings.saveChanges", "Save changes")}
           </button>
         </div>
       </div>

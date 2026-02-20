@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   CircleDollarSign,
@@ -10,6 +10,9 @@ import {
   Calendar,
   User,
 } from "lucide-react";
+
+import { toIntlLocale } from "@/i18n/config";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface DealStage {
   id: string;
@@ -50,9 +53,13 @@ interface KanbanColumn {
   totalAmount: number;
 }
 
-function formatCurrency(amount: number | null, currency = "USD"): string {
+function formatCurrency(
+  amount: number | null,
+  intlLocale: string,
+  currency = "USD"
+): string {
   if (amount === null || amount === undefined) return "$0";
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat(intlLocale, {
     style: "currency",
     currency,
     minimumFractionDigits: 0,
@@ -60,70 +67,92 @@ function formatCurrency(amount: number | null, currency = "USD"): string {
   }).format(amount);
 }
 
-function formatDate(dateString: string | null): string {
+function formatDate(dateString: string | null, intlLocale: string): string {
   if (!dateString) return "";
   const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
+  return date.toLocaleDateString(intlLocale, {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 }
 
-function getPriorityStyles(priority: string | null): {
+function getPriorityStyles(
+  priority: string | null,
+  t: (key: string, fallback?: string) => string
+): {
   bg: string;
   text: string;
   label: string;
 } {
   switch (priority) {
     case "high":
-      return { bg: "bg-red-50", text: "text-red-700", label: "High" };
+      return {
+        bg: "bg-red-50",
+        text: "text-red-700",
+        label: t("dashboard.deals.priority.high", "High"),
+      };
     case "medium":
-      return { bg: "bg-amber-50", text: "text-amber-700", label: "Medium" };
+      return {
+        bg: "bg-amber-50",
+        text: "text-amber-700",
+        label: t("dashboard.deals.priority.medium", "Medium"),
+      };
     case "low":
-      return { bg: "bg-green-50", text: "text-green-700", label: "Low" };
+      return {
+        bg: "bg-green-50",
+        text: "text-green-700",
+        label: t("dashboard.deals.priority.low", "Low"),
+      };
     default:
-      return { bg: "bg-gray-50", text: "text-gray-600", label: "None" };
+      return {
+        bg: "bg-gray-50",
+        text: "text-gray-600",
+        label: t("dashboard.deals.priority.none", "None"),
+      };
   }
 }
 
 function DealCard({ deal }: { deal: Deal }) {
-  const priority = getPriorityStyles(deal.priority);
+  const { locale, t } = useI18n();
+  const intlLocale = toIntlLocale(locale);
+  const priority = getPriorityStyles(deal.priority, t);
 
   return (
-    <Link href={`/deals/${deal.id}`} className="block bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer">
-      <h4 className="text-sm font-semibold text-gray-900 truncate mb-2">
+    <Link
+      href={`/deals/${deal.id}`}
+      className="block cursor-pointer rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow duration-200 hover:shadow-md"
+    >
+      <h4 className="mb-2 truncate text-sm font-semibold text-gray-900">
         {deal.name}
       </h4>
 
-      <div className="flex items-center gap-1.5 mb-3">
-        <CircleDollarSign className="w-4 h-4 text-[#0891b2]" />
+      <div className="mb-3 flex items-center gap-1.5">
+        <CircleDollarSign className="h-4 w-4 text-[#0891b2]" />
         <span className="text-sm font-medium text-gray-900">
-          {formatCurrency(deal.amount, deal.currency)}
+          {formatCurrency(deal.amount, intlLocale, deal.currency)}
         </span>
       </div>
 
       {deal.owner && (
-        <div className="flex items-center gap-1.5 mb-2">
-          <User className="w-3.5 h-3.5 text-gray-400" />
-          <span className="text-xs text-gray-600 truncate">
-            {deal.owner.name}
-          </span>
+        <div className="mb-2 flex items-center gap-1.5">
+          <User className="h-3.5 w-3.5 text-gray-400" />
+          <span className="truncate text-xs text-gray-600">{deal.owner.name}</span>
         </div>
       )}
 
       {deal.closeDate && (
-        <div className="flex items-center gap-1.5 mb-3">
-          <Calendar className="w-3.5 h-3.5 text-gray-400" />
+        <div className="mb-3 flex items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5 text-gray-400" />
           <span className="text-xs text-gray-600">
-            {formatDate(deal.closeDate)}
+            {formatDate(deal.closeDate, intlLocale)}
           </span>
         </div>
       )}
 
       {deal.priority && (
         <span
-          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${priority.bg} ${priority.text}`}
+          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${priority.bg} ${priority.text}`}
         >
           {priority.label}
         </span>
@@ -133,30 +162,35 @@ function DealCard({ deal }: { deal: Deal }) {
 }
 
 function StageColumn({ column }: { column: KanbanColumn }) {
+  const { locale, t } = useI18n();
+  const intlLocale = toIntlLocale(locale);
+
   return (
-    <div className="flex flex-col min-w-[280px] max-w-[320px] w-[300px] flex-shrink-0">
+    <div className="flex w-[300px] min-w-[280px] max-w-[320px] flex-shrink-0 flex-col">
       <div
-        className="rounded-t-lg px-4 py-3 bg-white border border-gray-200"
+        className="rounded-t-lg border border-gray-200 bg-white px-4 py-3"
         style={{ borderTopWidth: "3px", borderTopColor: column.stageColor }}
       >
-        <div className="flex items-center justify-between mb-1">
-          <h3 className="text-sm font-semibold text-gray-900 truncate">
+        <div className="mb-1 flex items-center justify-between">
+          <h3 className="truncate text-sm font-semibold text-gray-900">
             {column.stageName}
           </h3>
-          <span className="flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-gray-100 text-xs font-semibold text-gray-600">
+          <span className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-gray-100 px-1.5 text-xs font-semibold text-gray-600">
             {column.deals.length}
           </span>
         </div>
-        <p className="text-xs text-gray-500 font-medium">
-          {formatCurrency(column.totalAmount)}
+        <p className="text-xs font-medium text-gray-500">
+          {formatCurrency(column.totalAmount, intlLocale)}
         </p>
       </div>
 
-      <div className="flex-1 space-y-2 p-2 bg-gray-50 border-x border-b border-gray-200 rounded-b-lg overflow-y-auto max-h-[calc(100vh-260px)]">
+      <div className="max-h-[calc(100vh-260px)] flex-1 space-y-2 overflow-y-auto rounded-b-lg border-x border-b border-gray-200 bg-gray-50 p-2">
         {column.deals.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <CircleDollarSign className="w-8 h-8 text-gray-300 mb-2" />
-            <p className="text-xs text-gray-400">No deals in this stage</p>
+            <CircleDollarSign className="mb-2 h-8 w-8 text-gray-300" />
+            <p className="text-xs text-gray-400">
+              {t("dashboard.deals.emptyStage", "No deals in this stage")}
+            </p>
           </div>
         ) : (
           column.deals.map((deal) => <DealCard key={deal.id} deal={deal} />)
@@ -168,6 +202,8 @@ function StageColumn({ column }: { column: KanbanColumn }) {
 
 export default function DealsBoard({ deals }: { deals: Deal[] }) {
   const [viewMode, setViewMode] = useState<"board" | "list">("board");
+  const { locale, t } = useI18n();
+  const intlLocale = toIntlLocale(locale);
 
   const columns: KanbanColumn[] = useMemo(() => {
     const stageMap = new Map<string, KanbanColumn>();
@@ -187,7 +223,9 @@ export default function DealsBoard({ deals }: { deals: Deal[] }) {
         });
       }
 
-      const col = stageMap.get(key)!;
+      const col = stageMap.get(key);
+      if (!col) continue;
+
       col.deals.push(deal);
       col.totalAmount += deal.amount ?? 0;
     }
@@ -198,23 +236,30 @@ export default function DealsBoard({ deals }: { deals: Deal[] }) {
   }, [deals]);
 
   const totalPipelineValue = useMemo(
-    () => deals.reduce((sum, d) => sum + (d.amount ?? 0), 0),
+    () => deals.reduce((sum, deal) => sum + (deal.amount ?? 0), 0),
     [deals]
   );
 
   return (
-    <div className="p-6 pt-8 h-full flex flex-col">
-      {/* Page Header */}
-      <div className="flex items-center justify-between mb-6">
+    <div className="flex h-full flex-col p-6 pt-8">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Deals</h1>
-          <p className="text-gray-600 mt-1">
-            {deals.length} deals &middot; {formatCurrency(totalPipelineValue)}{" "}
-            total pipeline value
+          <h1 className="text-2xl font-bold text-gray-900">
+            {t("dashboard.deals.title", "Deals")}
+          </h1>
+          <p className="mt-1 text-gray-600">
+            {t(
+              "dashboard.deals.summary",
+              "{count} deals · {value} total pipeline value",
+              {
+                count: deals.length,
+                value: formatCurrency(totalPipelineValue, intlLocale),
+              }
+            )}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="flex items-center overflow-hidden rounded-lg border border-gray-200 bg-white">
             <button
               onClick={() => setViewMode("board")}
               className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
@@ -222,9 +267,10 @@ export default function DealsBoard({ deals }: { deals: Deal[] }) {
                   ? "bg-[#0891b2] text-white"
                   : "text-gray-600 hover:bg-gray-50"
               }`}
-              title="Board view"
+              title={t("dashboard.deals.view.board", "Board view")}
+              aria-label={t("dashboard.deals.view.board", "Board view")}
             >
-              <LayoutGrid className="w-4 h-4" />
+              <LayoutGrid className="h-4 w-4" />
             </button>
             <button
               onClick={() => setViewMode("list")}
@@ -233,33 +279,38 @@ export default function DealsBoard({ deals }: { deals: Deal[] }) {
                   ? "bg-[#0891b2] text-white"
                   : "text-gray-600 hover:bg-gray-50"
               }`}
-              title="List view"
+              title={t("dashboard.deals.view.list", "List view")}
+              aria-label={t("dashboard.deals.view.list", "List view")}
             >
-              <List className="w-4 h-4" />
+              <List className="h-4 w-4" />
             </button>
           </div>
 
           <Link
             href="/deals/new"
-            className="flex items-center gap-2 px-4 py-2 bg-[#0891b2] text-white rounded-lg hover:bg-[#0ea5e9] transition-colors text-sm font-medium"
+            className="flex items-center gap-2 rounded-lg bg-[#0891b2] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0ea5e9]"
           >
-            <Plus className="w-4 h-4" />
-            Create deal
+            <Plus className="h-4 w-4" />
+            {t("dashboard.deals.createDeal", "Create deal")}
           </Link>
         </div>
       </div>
 
-      {/* Kanban Board */}
       {viewMode === "board" && (
         <div className="flex-1 overflow-x-auto pb-4">
-          <div className="flex gap-4 h-full min-w-max">
+          <div className="flex h-full min-w-max gap-4">
             {columns.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center w-full min-w-[600px]">
+              <div className="flex w-full min-w-[600px] flex-1 items-center justify-center">
                 <div className="text-center">
-                  <CircleDollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 font-medium">No deals yet</p>
-                  <p className="text-sm text-gray-400 mt-1">
-                    Create your first deal to get started
+                  <CircleDollarSign className="mx-auto mb-3 h-12 w-12 text-gray-300" />
+                  <p className="font-medium text-gray-500">
+                    {t("dashboard.deals.noDealsYet", "No deals yet")}
+                  </p>
+                  <p className="mt-1 text-sm text-gray-400">
+                    {t(
+                      "dashboard.deals.createFirst",
+                      "Create your first deal to get started"
+                    )}
                   </p>
                 </div>
               </div>
@@ -272,58 +323,60 @@ export default function DealsBoard({ deals }: { deals: Deal[] }) {
         </div>
       )}
 
-      {/* List View */}
       {viewMode === "list" && (
-        <div className="flex-1 bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="flex-1 overflow-hidden rounded-xl border border-gray-200 bg-white">
           <table className="w-full">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Deal Name
+              <tr className="border-b border-gray-200 bg-gray-50">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  {t("dashboard.deals.table.dealName", "Deal Name")}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  {t("dashboard.deals.table.amount", "Amount")}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Stage
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  {t("dashboard.deals.table.stage", "Stage")}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Owner
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  {t("dashboard.deals.table.owner", "Owner")}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Close Date
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  {t("dashboard.deals.table.closeDate", "Close Date")}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Priority
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  {t("dashboard.deals.table.priority", "Priority")}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {deals.map((deal) => {
-                const priority = getPriorityStyles(deal.priority);
+                const priority = getPriorityStyles(deal.priority, t);
                 return (
                   <tr
                     key={deal.id}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    className="cursor-pointer transition-colors hover:bg-gray-50"
                   >
                     <td className="px-4 py-3">
-                      <Link href={`/deals/${deal.id}`} className="text-sm font-medium text-gray-900 hover:text-[#0891b2]">
+                      <Link
+                        href={`/deals/${deal.id}`}
+                        className="text-sm font-medium text-gray-900 hover:text-[#0891b2]"
+                      >
                         {deal.name}
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
-                      {formatCurrency(deal.amount, deal.currency)}
+                      {formatCurrency(deal.amount, intlLocale, deal.currency)}
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium"
+                        className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium"
                         style={{
                           backgroundColor: `${deal.stage?.color}15`,
                           color: deal.stage?.color,
                         }}
                       >
                         <span
-                          className="w-1.5 h-1.5 rounded-full"
+                          className="h-1.5 w-1.5 rounded-full"
                           style={{ backgroundColor: deal.stage?.color }}
                         />
                         {deal.stage?.name}
@@ -333,12 +386,12 @@ export default function DealsBoard({ deals }: { deals: Deal[] }) {
                       {deal.owner?.name || "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
-                      {deal.closeDate ? formatDate(deal.closeDate) : "-"}
+                      {deal.closeDate ? formatDate(deal.closeDate, intlLocale) : "-"}
                     </td>
                     <td className="px-4 py-3">
                       {deal.priority ? (
                         <span
-                          className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${priority.bg} ${priority.text}`}
+                          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${priority.bg} ${priority.text}`}
                         >
                           {priority.label}
                         </span>
@@ -351,11 +404,8 @@ export default function DealsBoard({ deals }: { deals: Deal[] }) {
               })}
               {deals.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="px-4 py-12 text-center text-gray-500"
-                  >
-                    No deals found
+                  <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
+                    {t("dashboard.deals.emptyList", "No deals found")}
                   </td>
                 </tr>
               )}

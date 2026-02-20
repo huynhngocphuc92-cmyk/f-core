@@ -3,11 +3,13 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
+
 import {
   updateTicketStatus,
   updateTicketPriority,
   deleteTicket,
 } from "@/app/actions/tickets";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export function StatusSelector({
   ticketId,
@@ -18,6 +20,7 @@ export function StatusSelector({
 }) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const { t } = useI18n();
 
   return (
     <select
@@ -29,13 +32,21 @@ export function StatusSelector({
           router.refresh();
         });
       }}
-      className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2] disabled:opacity-50"
+      className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-[#0891b2] focus:outline-none disabled:opacity-50"
     >
-      <option value="open">Open</option>
-      <option value="in_progress">In Progress</option>
-      <option value="waiting">Waiting</option>
-      <option value="resolved">Resolved</option>
-      <option value="closed">Closed</option>
+      <option value="open">{t("dashboard.tickets.status.open", "Open")}</option>
+      <option value="in_progress">
+        {t("dashboard.tickets.status.inProgress", "In Progress")}
+      </option>
+      <option value="waiting">
+        {t("dashboard.tickets.status.waiting", "Waiting")}
+      </option>
+      <option value="resolved">
+        {t("dashboard.tickets.status.resolved", "Resolved")}
+      </option>
+      <option value="closed">
+        {t("dashboard.tickets.status.closed", "Closed")}
+      </option>
     </select>
   );
 }
@@ -49,6 +60,7 @@ export function PrioritySelector({
 }) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const { t } = useI18n();
 
   return (
     <select
@@ -60,12 +72,16 @@ export function PrioritySelector({
           router.refresh();
         });
       }}
-      className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2] disabled:opacity-50"
+      className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-[#0891b2] focus:outline-none disabled:opacity-50"
     >
-      <option value="low">Low</option>
-      <option value="medium">Medium</option>
-      <option value="high">High</option>
-      <option value="urgent">Urgent</option>
+      <option value="low">{t("dashboard.tickets.priority.low", "Low")}</option>
+      <option value="medium">
+        {t("dashboard.tickets.priority.medium", "Medium")}
+      </option>
+      <option value="high">{t("dashboard.tickets.priority.high", "High")}</option>
+      <option value="urgent">
+        {t("dashboard.tickets.priority.urgent", "Urgent")}
+      </option>
     </select>
   );
 }
@@ -73,21 +89,30 @@ export function PrioritySelector({
 export function DeleteButton({ ticketId }: { ticketId: string }) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const { t } = useI18n();
 
   return (
     <button
       disabled={isPending}
       onClick={() => {
-        if (!confirm("Delete this ticket?")) return;
+        if (
+          !confirm(
+            t("dashboard.tickets.actions.deleteConfirm", "Delete this ticket?")
+          )
+        ) {
+          return;
+        }
         startTransition(async () => {
           await deleteTicket(ticketId);
           router.push("/tickets");
         });
       }}
-      className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+      className="flex items-center gap-2 rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
     >
-      <Trash2 className="w-4 h-4" />
-      {isPending ? "Deleting..." : "Delete"}
+      <Trash2 className="h-4 w-4" />
+      {isPending
+        ? t("dashboard.tickets.actions.deleting", "Deleting...")
+        : t("dashboard.tickets.actions.delete", "Delete")}
     </button>
   );
 }

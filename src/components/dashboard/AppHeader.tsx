@@ -1,89 +1,192 @@
 "use client";
 
-import { Bell, Search, Plus, ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Bell, ChevronDown, Plus, Search } from "lucide-react";
 
-interface AppHeaderProps {
-  sidebarCollapsed?: boolean;
+import { COMMAND_PALETTE_OPEN_EVENT } from "@/components/crm/commandPaletteEvents";
+import { useI18n } from "@/i18n/I18nProvider";
+
+type CreateOption = {
+  key: string;
+  fallback: string;
+  href: string;
+};
+
+const createOptions: CreateOption[] = [
+  {
+    key: "dashboard.header.createMenu.contact",
+    fallback: "Contact",
+    href: "/contacts/new",
+  },
+  {
+    key: "dashboard.header.createMenu.company",
+    fallback: "Company",
+    href: "/companies/new",
+  },
+  {
+    key: "dashboard.header.createMenu.deal",
+    fallback: "Deal",
+    href: "/deals/new",
+  },
+  {
+    key: "dashboard.header.createMenu.ticket",
+    fallback: "Ticket",
+    href: "/tickets/new",
+  },
+  {
+    key: "dashboard.header.createMenu.workflow",
+    fallback: "Workflow",
+    href: "/workflows/new",
+  },
+];
+
+const sectionLabelMap: Record<string, { key: string; fallback: string }> = {
+  dashboard: { key: "sidebar.navigation.dashboard", fallback: "Dashboard" },
+  contacts: { key: "sidebar.navigation.contacts", fallback: "Contacts" },
+  companies: { key: "sidebar.navigation.companies", fallback: "Companies" },
+  deals: { key: "sidebar.navigation.deals", fallback: "Deals" },
+  quotes: { key: "sidebar.navigation.quotes", fallback: "Quotes" },
+  tickets: { key: "sidebar.navigation.tickets", fallback: "Tickets" },
+  reports: { key: "sidebar.navigation.reports", fallback: "Reports" },
+  workflows: { key: "sidebar.navigation.workflows", fallback: "Workflows" },
+  service: { key: "sidebar.navigation.serviceInbox", fallback: "Service" },
+  marketing: { key: "sidebar.navigation.marketing", fallback: "Marketing" },
+  content: { key: "sidebar.navigation.contentBlog", fallback: "Content" },
+  data: { key: "sidebar.navigation.dataSync", fallback: "Data" },
+  settings: { key: "sidebar.bottom.settings", fallback: "Settings" },
+  "ai-assistant": { key: "sidebar.navigation.aiCopilot", fallback: "AI Copilot" },
+  commerce: { key: "sidebar.navigation.revenue", fallback: "Commerce" },
+  sales: { key: "sidebar.navigation.salesForecast", fallback: "Sales" },
+  "knowledge-base": {
+    key: "sidebar.navigation.knowledgeBase",
+    fallback: "Knowledge Base",
+  },
+};
+
+function formatSegment(segment: string): string {
+  return segment
+    .split("-")
+    .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
+    .join(" ");
 }
 
-export default function AppHeader({ sidebarCollapsed = false }: AppHeaderProps) {
+export default function AppHeader() {
+  const pathname = usePathname();
+  const { t } = useI18n();
   const [showCreateMenu, setShowCreateMenu] = useState(false);
 
-  const createOptions = [
-    { name: "Contact", href: "/contacts/new" },
-    { name: "Company", href: "/companies/new" },
-    { name: "Deal", href: "/deals/new" },
-    { name: "Task", href: "/tasks/new" },
-    { name: "Note", href: "/notes/new" },
-  ];
+  const { sectionLabel, subSectionLabel } = useMemo(() => {
+    const segments = pathname.split("/").filter(Boolean);
+    const section = segments[0] || "dashboard";
+    const sectionConfig = sectionLabelMap[section];
+    const resolvedSection = sectionConfig
+      ? t(sectionConfig.key, sectionConfig.fallback)
+      : formatSegment(section);
+    const second = segments[1];
+    return {
+      sectionLabel: resolvedSection,
+      subSectionLabel: second ? formatSegment(second) : null,
+    };
+  }, [pathname, t]);
+
+  const openCommandPalette = () => {
+    window.dispatchEvent(new Event(COMMAND_PALETTE_OPEN_EVENT));
+  };
 
   return (
-    <header
-      className={`fixed top-0 right-0 z-30 h-16 bg-white border-b border-gray-200 transition-all duration-300 ${
-        sidebarCollapsed ? "left-16" : "left-64"
-      }`}
-    >
-      <div className="flex items-center justify-between h-full px-6">
-        {/* Left side - Search */}
-        <div className="flex items-center gap-4 flex-1">
-          <div className="relative max-w-md w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search contacts, companies, deals..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0891b2] focus:bg-white transition-colors"
-            />
-            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-xs text-gray-400 bg-gray-100 rounded">
-              ⌘K
-            </kbd>
-          </div>
+    <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/95 backdrop-blur">
+      <div className="flex h-16 items-center justify-between gap-4 px-6">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            {t("dashboard.header.workspaceLabel", "Workspace")}
+          </p>
+          <p className="truncate text-sm font-semibold text-gray-900">
+            {sectionLabel}
+            {subSectionLabel ? (
+              <span className="text-gray-500"> / {subSectionLabel}</span>
+            ) : null}
+          </p>
         </div>
 
-        {/* Right side - Actions */}
+        <button
+          type="button"
+          onClick={openCommandPalette}
+          className="flex h-10 min-w-[220px] flex-1 items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 text-left text-sm text-gray-500 transition-colors hover:border-cyan-300 hover:bg-white hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-100"
+          aria-label={t(
+            "dashboard.header.search.ariaLabel",
+            "Open global search"
+          )}
+        >
+          <span className="flex items-center gap-2 overflow-hidden">
+            <Search className="h-4 w-4 flex-shrink-0 text-gray-400" />
+            <span className="truncate">
+              {t(
+                "dashboard.header.search.prompt",
+                "Search contacts, companies, deals..."
+              )}
+            </span>
+          </span>
+          <kbd className="hidden rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-gray-500 sm:inline-flex">
+            ⌘K
+          </kbd>
+        </button>
+
         <div className="flex items-center gap-2">
-          {/* Create Button */}
           <div className="relative">
             <button
-              onClick={() => setShowCreateMenu(!showCreateMenu)}
-              className="flex items-center gap-1 px-4 py-2 bg-[#0891b2] text-white rounded-lg text-sm font-medium hover:bg-[#0ea5e9] transition-colors"
+              type="button"
+              onClick={() => setShowCreateMenu((prev) => !prev)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#0891b2] px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0e7490]"
             >
-              <Plus className="w-4 h-4" />
-              Create
-              <ChevronDown className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
+              {t("dashboard.header.createMenu.title", "Create")}
+              <ChevronDown className="h-4 w-4" />
             </button>
 
             {showCreateMenu && (
               <>
-                <div
-                  className="fixed inset-0 z-10"
+                <button
+                  type="button"
+                  aria-label="close create menu"
+                  className="fixed inset-0 z-10 cursor-default"
                   onClick={() => setShowCreateMenu(false)}
                 />
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                <div className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
                   {createOptions.map((option) => (
-                    <a
-                      key={option.name}
+                    <Link
+                      key={option.key}
                       href={option.href}
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       onClick={() => setShowCreateMenu(false)}
+                      className="block border-b border-gray-100 px-4 py-2.5 text-sm text-gray-700 transition-colors last:border-b-0 hover:bg-gray-50"
                     >
-                      {option.name}
-                    </a>
+                      {t(option.key, option.fallback)}
+                    </Link>
                   ))}
                 </div>
               </>
             )}
           </div>
 
-          {/* Notifications */}
-          <button className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+          <button
+            type="button"
+            className="relative rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+            aria-label={t(
+              "dashboard.header.notifications",
+              "View notifications"
+            )}
+          >
+            <Bell className="h-5 w-5" />
+            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
           </button>
 
-          {/* User Avatar */}
-          <button className="flex items-center gap-2 p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-            <div className="w-8 h-8 rounded-full bg-[#0891b2] flex items-center justify-center text-white font-medium text-sm">
+          <button
+            type="button"
+            className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-gray-100"
+            aria-label={t("dashboard.header.profile", "Open profile menu")}
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0891b2] text-sm font-semibold text-white">
               A
             </div>
           </button>

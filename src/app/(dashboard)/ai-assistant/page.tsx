@@ -1,9 +1,12 @@
 import { Bot } from "lucide-react";
 import { AIAssistantClient } from "./components/AIAssistantClient";
+import { getServerI18n } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
-export default function AIAssistantPage() {
+export default async function AIAssistantPage() {
+  const { t } = await getServerI18n();
+
   return (
     <div className="flex h-screen flex-col">
       {/* Header */}
@@ -13,10 +16,10 @@ export default function AIAssistantPage() {
         </div>
         <div>
           <h1 className="text-lg font-semibold text-gray-900">
-            F-CORE Copilot
+            {t("dashboard.aiAssistant.title", "F-CORE Copilot")}
           </h1>
           <p className="text-xs text-gray-500">
-            AI-powered CRM assistant
+            {t("dashboard.aiAssistant.subtitle", "AI-powered CRM assistant")}
           </p>
         </div>
       </div>

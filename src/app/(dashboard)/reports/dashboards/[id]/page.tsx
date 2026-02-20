@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
+  GripVertical,
   Plus,
   Loader2,
   X,
@@ -81,6 +82,59 @@ const HEIGHT_OPTIONS = [
   { value: 3, label: "Tall (3 rows)" },
 ];
 
+const GRID_COLUMNS = 12;
+const GRID_GAP = 24;
+const GRID_ROW_HEIGHT = 200;
+
+type WidgetInteraction = {
+  type: "drag" | "resize";
+  widgetId: string;
+  pointerId: number;
+  startClientX: number;
+  startClientY: number;
+  initialX: number;
+  initialY: number;
+  initialW: number;
+  initialH: number;
+};
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function overlap1D(startA: number, spanA: number, startB: number, spanB: number): boolean {
+  return startA < startB + spanB && startB < startA + spanA;
+}
+
+function widgetsOverlap(a: DashboardWidget, b: DashboardWidget): boolean {
+  return overlap1D(a.x, a.w, b.x, b.w) && overlap1D(a.y, a.h, b.y, b.h);
+}
+
+function normalizeLayout(widgets: DashboardWidget[]): DashboardWidget[] {
+  const sorted = [...widgets].sort((a, b) => a.y - b.y || a.x - b.x);
+  const placed: DashboardWidget[] = [];
+
+  for (const widget of sorted) {
+    const normalized: DashboardWidget = {
+      ...widget,
+      x: clamp(widget.x, 0, GRID_COLUMNS - 1),
+      y: Math.max(0, widget.y),
+      w: clamp(widget.w, 1, GRID_COLUMNS),
+      h: clamp(widget.h, 1, 12),
+    };
+
+    normalized.w = Math.min(normalized.w, GRID_COLUMNS - normalized.x);
+
+    while (placed.some((other) => widgetsOverlap(normalized, other))) {
+      normalized.y += 1;
+    }
+
+    placed.push(normalized);
+  }
+
+  return placed;
+}
+
 // =============================================================================
 // DASHBOARD DETAIL PAGE
 // =============================================================================
@@ -111,6 +165,12 @@ export default function DashboardDetailPage() {
   const [chartDataMap, setChartDataMap] = useState<
     Record<string, WidgetChartData>
   >({});
+  const [activeWidgetInteraction, setActiveWidgetInteraction] =
+    useState<WidgetInteraction | null>(null);
+  const [savingLayout, setSavingLayout] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const widgetsRef = useRef<DashboardWidget[]>([]);
+  const pointerTargetRef = useRef<HTMLElement | null>(null);
 
   // ---------------------------------------------------------------------------
   // FETCH DASHBOARD
@@ -123,7 +183,13 @@ export default function DashboardDetailPage() {
       const res = await fetch(`/api/dashboards/${dashboardId}`);
       if (!res.ok) throw new Error("Failed to fetch dashboard");
       const json = await res.json();
-      setDashboard(json.data || null);
+      const nextDashboard = json.data
+        ? {
+            ...json.data,
+            widgets: normalizeLayout(json.data.widgets || []),
+          }
+        : null;
+      setDashboard(nextDashboard);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -134,6 +200,10 @@ export default function DashboardDetailPage() {
   useEffect(() => {
     fetchDashboard();
   }, [fetchDashboard]);
+
+  useEffect(() => {
+    widgetsRef.current = dashboard?.widgets || [];
+  }, [dashboard?.widgets]);
 
   // ---------------------------------------------------------------------------
   // RUN REPORTS FOR WIDGETS
@@ -300,12 +370,146 @@ export default function DashboardDetailPage() {
   // GRID STYLE HELPER
   // ---------------------------------------------------------------------------
 
+  const persistWidgetLayout = useCallback(
+    async (widgets: DashboardWidget[]) => {
+      try {
+        setSavingLayout(true);
+        const res = await fetch(`/api/dashboards/${dashboardId}/widgets`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            widgets: widgets.map((widget) => ({
+              id: widget.id,
+              x: widget.x,
+              y: widget.y,
+              w: widget.w,
+              h: widget.h,
+            })),
+          }),
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to persist widget layout");
+        }
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to persist widget layout"
+        );
+        await fetchDashboard();
+      } finally {
+        setSavingLayout(false);
+      }
+    },
+    [dashboardId, fetchDashboard]
+  );
+
+  const beginWidgetInteraction = useCallback(
+    (
+      event: React.PointerEvent<HTMLElement>,
+      widget: DashboardWidget,
+      type: WidgetInteraction["type"]
+    ) => {
+      event.preventDefault();
+      event.stopPropagation();
+      pointerTargetRef.current = event.currentTarget;
+      event.currentTarget.setPointerCapture(event.pointerId);
+
+      setActiveWidgetInteraction({
+        type,
+        widgetId: widget.id,
+        pointerId: event.pointerId,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        initialX: widget.x,
+        initialY: widget.y,
+        initialW: widget.w,
+        initialH: widget.h,
+      });
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!activeWidgetInteraction) return;
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const gridElement = gridRef.current;
+      if (!gridElement) return;
+
+      const deltaX = event.clientX - activeWidgetInteraction.startClientX;
+      const deltaY = event.clientY - activeWidgetInteraction.startClientY;
+      const columnWidth =
+        (gridElement.clientWidth - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
+      const stepWidth = columnWidth + GRID_GAP;
+      const stepHeight = GRID_ROW_HEIGHT + GRID_GAP;
+      const deltaColumns = Math.round(deltaX / stepWidth);
+      const deltaRows = Math.round(deltaY / stepHeight);
+
+      setDashboard((previous) => {
+        if (!previous) return previous;
+
+        const updatedWidgets = previous.widgets.map((widget) => {
+          if (widget.id !== activeWidgetInteraction.widgetId) return widget;
+
+          if (activeWidgetInteraction.type === "drag") {
+            const nextX = clamp(
+              activeWidgetInteraction.initialX + deltaColumns,
+              0,
+              GRID_COLUMNS - widget.w
+            );
+            const nextY = Math.max(0, activeWidgetInteraction.initialY + deltaRows);
+            return { ...widget, x: nextX, y: nextY };
+          }
+
+          const nextW = clamp(
+            activeWidgetInteraction.initialW + deltaColumns,
+            1,
+            GRID_COLUMNS - activeWidgetInteraction.initialX
+          );
+          const nextH = clamp(activeWidgetInteraction.initialH + deltaRows, 1, 12);
+          return { ...widget, w: nextW, h: nextH };
+        });
+
+        return { ...previous, widgets: normalizeLayout(updatedWidgets) };
+      });
+    };
+
+    const finishInteraction = () => {
+      const target = pointerTargetRef.current;
+      if (target) {
+        try {
+          target.releasePointerCapture(activeWidgetInteraction.pointerId);
+        } catch {
+          // Ignore release errors.
+        }
+      }
+      pointerTargetRef.current = null;
+      setActiveWidgetInteraction(null);
+      void persistWidgetLayout(widgetsRef.current);
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      if (event.pointerId !== activeWidgetInteraction.pointerId) return;
+      finishInteraction();
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+    };
+  }, [activeWidgetInteraction, persistWidgetLayout]);
+
   const getWidgetGridStyle = (
     widget: DashboardWidget
   ): React.CSSProperties => {
     return {
-      gridColumn: `span ${Math.min(widget.w, 12)} / span ${Math.min(widget.w, 12)}`,
-      minHeight: `${widget.h * 200}px`,
+      gridColumn: `${widget.x + 1} / span ${widget.w}`,
+      gridRow: `${widget.y + 1} / span ${widget.h}`,
     };
   };
 
@@ -367,7 +571,7 @@ export default function DashboardDetailPage() {
       </Link>
 
       {/* Page Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             {dashboard.name}
@@ -378,14 +582,25 @@ export default function DashboardDetailPage() {
             </p>
           )}
         </div>
-        <button
-          onClick={openAddWidgetModal}
-          className="inline-flex items-center justify-center rounded-md bg-[#0891b2] px-6 py-3 text-base font-semibold text-white hover:bg-[#0e7490] transition-colors shadow-lg shadow-cyan-500/25"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Add Widget
-        </button>
+        <div className="flex items-center gap-3">
+          {savingLayout && (
+            <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Saving layout...
+            </span>
+          )}
+          <button
+            onClick={openAddWidgetModal}
+            className="inline-flex items-center justify-center rounded-md bg-[#0891b2] px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-[#0e7490] shadow-lg shadow-cyan-500/25"
+          >
+            <Plus className="mr-2 h-5 w-5" />
+            Add Widget
+          </button>
+        </div>
       </div>
+      <p className="mb-6 text-xs text-gray-500">
+        Drag widgets by the grip icon and resize from the bottom-right corner.
+      </p>
 
       {/* Error */}
       {error && (
@@ -400,9 +615,11 @@ export default function DashboardDetailPage() {
       {/* Widgets Grid */}
       {dashboard.widgets.length > 0 ? (
         <div
+          ref={gridRef}
           className="grid gap-6"
           style={{
-            gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
+            gridTemplateColumns: `repeat(${GRID_COLUMNS}, minmax(0, 1fr))`,
+            gridAutoRows: `${GRID_ROW_HEIGHT}px`,
           }}
         >
           {dashboard.widgets.map((widget) => {
@@ -413,26 +630,45 @@ export default function DashboardDetailPage() {
             return (
               <div
                 key={widget.id}
-                className="rounded-2xl bg-white p-6 border border-gray-100 shadow-sm"
+                className={`relative rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow ${
+                  activeWidgetInteraction?.widgetId === widget.id
+                    ? "shadow-md ring-2 ring-cyan-100"
+                    : ""
+                }`}
                 style={getWidgetGridStyle(widget)}
               >
                 {/* Widget Header */}
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-gray-900 truncate">
-                    {widget.title}
-                  </h3>
-                  <button
-                    onClick={() => handleRemoveWidget(widget.id)}
-                    disabled={removingWidgetId === widget.id}
-                    className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors flex-shrink-0"
-                    title="Remove widget"
-                  >
-                    {removingWidgetId === widget.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="w-4 h-4" />
-                    )}
-                  </button>
+                <div className="mb-4 flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <button
+                      type="button"
+                      onPointerDown={(event) =>
+                        beginWidgetInteraction(event, widget, "drag")
+                      }
+                      className="cursor-grab rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 active:cursor-grabbing"
+                      title="Drag widget"
+                      aria-label="Drag widget"
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </button>
+                    <h3 className="truncate text-sm font-semibold text-gray-900">
+                      {widget.title}
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleRemoveWidget(widget.id)}
+                      disabled={removingWidgetId === widget.id}
+                      className="flex-shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                      title="Remove widget"
+                    >
+                      {removingWidgetId === widget.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Widget Chart Content */}
@@ -461,6 +697,18 @@ export default function DashboardDetailPage() {
                     </span>
                   </div>
                 )}
+
+                <button
+                  type="button"
+                  onPointerDown={(event) =>
+                    beginWidgetInteraction(event, widget, "resize")
+                  }
+                  className="absolute bottom-2 right-2 h-4 w-4 cursor-se-resize rounded border border-gray-300 bg-white text-transparent opacity-80 transition-opacity hover:opacity-100"
+                  title="Resize widget"
+                  aria-label="Resize widget"
+                >
+                  resize
+                </button>
               </div>
             );
           })}

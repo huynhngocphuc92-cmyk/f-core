@@ -2,9 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useState, useRef, useEffect, useMemo } from "react";
-import { MessageBubble } from "./MessageBubble";
-import { SuggestedPrompts } from "./SuggestedPrompts";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Send,
   Loader2,
@@ -14,6 +12,11 @@ import {
   Bot,
 } from "lucide-react";
 
+import { useI18n } from "@/i18n/I18nProvider";
+
+import { MessageBubble } from "./MessageBubble";
+import { SuggestedPrompts } from "./SuggestedPrompts";
+
 interface Conversation {
   id: string;
   title: string | null;
@@ -22,24 +25,23 @@ interface Conversation {
 }
 
 export function AIAssistantClient() {
+  const { t } = useI18n();
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const conversationIdRef = useRef(conversationId);
-  conversationIdRef.current = conversationId;
 
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: "/api/ai/chat",
-        body: () => ({ conversationId: conversationIdRef.current }),
+        body: () => ({ conversationId }),
       }),
-    [],
+    [conversationId]
   );
 
-  const { messages, status, sendMessage, setMessages, error } = useChat({
+  const { messages, status, sendMessage, setMessages } = useChat({
     transport,
     onError: (err) => {
       setMessages((prev) => [
@@ -50,7 +52,18 @@ export function AIAssistantClient() {
           parts: [
             {
               type: "text" as const,
-              text: `Error: ${err.message || "Failed to get response. Check your API key configuration."}`,
+              text: t(
+                "dashboard.aiAssistant.client.errors.responseFailed",
+                "Error: {message}",
+                {
+                  message:
+                    err.message ||
+                    t(
+                      "dashboard.aiAssistant.client.errors.defaultMessage",
+                      "Failed to get response. Check your API key configuration."
+                    ),
+                }
+              ),
             },
           ],
         },
@@ -60,29 +73,41 @@ export function AIAssistantClient() {
 
   const isLoading = status === "submitted" || status === "streaming";
 
-  // Auto-scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  // Load conversations list
-  useEffect(() => {
-    loadConversations();
-  }, []);
-
-  async function loadConversations() {
+  const fetchConversations = useCallback(async (): Promise<Conversation[]> => {
     try {
       const res = await fetch("/api/ai/conversations");
       if (res.ok) {
         const data = await res.json();
-        setConversations(data.data || []);
+        return data.data || [];
       }
     } catch {
-      // Silently fail - conversations list is not critical
+      // Silently fail: conversation list is not critical.
     }
-  }
+    return [];
+  }, []);
 
-  async function createNewConversation() {
+  const loadConversations = useCallback(async () => {
+    const nextConversations = await fetchConversations();
+    setConversations(nextConversations);
+  }, [fetchConversations]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  useEffect(() => {
+    let active = true;
+    void fetchConversations().then((nextConversations) => {
+      if (active) {
+        setConversations(nextConversations);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [fetchConversations]);
+
+  const createNewConversation = useCallback(async () => {
     try {
       const res = await fetch("/api/ai/conversations", {
         method: "POST",
@@ -99,48 +124,55 @@ export function AIAssistantClient() {
       setConversationId(null);
       setMessages([]);
     }
-  }
+  }, [loadConversations, setMessages]);
 
-  async function loadConversation(id: string) {
-    try {
-      const res = await fetch(`/api/ai/conversations/${id}`);
-      if (res.ok) {
-        const conv = await res.json();
-        setConversationId(conv.id);
-        const restored = (conv.messages || []).map(
-          (m: { id: string; role: string; content: string }) => ({
-            id: m.id,
-            role: m.role as "user" | "assistant",
-            parts: [{ type: "text" as const, text: m.content }],
-          }),
-        );
-        setMessages(restored);
+  const loadConversation = useCallback(
+    async (id: string) => {
+      try {
+        const res = await fetch(`/api/ai/conversations/${id}`);
+        if (res.ok) {
+          const conv = await res.json();
+          setConversationId(conv.id);
+          const restored = (conv.messages || []).map(
+            (message: { id: string; role: string; content: string }) => ({
+              id: message.id,
+              role: message.role as "user" | "assistant",
+              parts: [{ type: "text" as const, text: message.content }],
+            })
+          );
+          setMessages(restored);
+        }
+      } catch {
+        // Ignore load errors.
       }
-    } catch {
-      // Ignore load errors
-    }
-  }
+    },
+    [setMessages]
+  );
 
-  async function deleteConversation(id: string) {
-    try {
-      await fetch(`/api/ai/conversations/${id}`, { method: "DELETE" });
-      if (conversationId === id) {
-        setConversationId(null);
-        setMessages([]);
+  const deleteConversation = useCallback(
+    async (id: string) => {
+      try {
+        await fetch(`/api/ai/conversations/${id}`, { method: "DELETE" });
+        if (conversationId === id) {
+          setConversationId(null);
+          setMessages([]);
+        }
+        await loadConversations();
+      } catch {
+        // Ignore delete errors.
       }
-      await loadConversations();
-    } catch {
-      // Ignore delete errors
-    }
-  }
+    },
+    [conversationId, loadConversations, setMessages]
+  );
 
   function handleSuggestedPrompt(prompt: string) {
     setInputValue(prompt);
   }
 
-  async function handleFormSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleFormSubmit(event: React.FormEvent) {
+    event.preventDefault();
     if (!inputValue.trim() || isLoading) return;
+
     const text = inputValue;
     setInputValue("");
     await sendMessage({ text });
@@ -148,17 +180,19 @@ export function AIAssistantClient() {
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      {/* Conversation Sidebar */}
       {sidebarOpen && (
         <div className="flex w-64 flex-col border-r border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between p-3">
             <span className="text-xs font-semibold uppercase text-gray-500">
-              Conversations
+              {t("dashboard.aiAssistant.client.conversations", "Conversations")}
             </span>
             <button
               onClick={createNewConversation}
               className="rounded-md p-1.5 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
-              title="New conversation"
+              title={t(
+                "dashboard.aiAssistant.client.newConversationTitle",
+                "New conversation"
+              )}
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -177,11 +211,15 @@ export function AIAssistantClient() {
               >
                 <MessageSquare className="h-3.5 w-3.5 flex-shrink-0" />
                 <span className="flex-1 truncate">
-                  {conv.title || "New conversation"}
+                  {conv.title ||
+                    t(
+                      "dashboard.aiAssistant.client.newConversation",
+                      "New conversation"
+                    )}
                 </span>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  onClick={(event) => {
+                    event.stopPropagation();
                     deleteConversation(conv.id);
                   }}
                   className="hidden rounded p-0.5 text-gray-400 hover:text-red-500 group-hover:block"
@@ -193,7 +231,10 @@ export function AIAssistantClient() {
 
             {conversations.length === 0 && (
               <div className="px-3 py-8 text-center text-xs text-gray-400">
-                No conversations yet
+                {t(
+                  "dashboard.aiAssistant.client.noConversations",
+                  "No conversations yet"
+                )}
               </div>
             )}
           </div>
@@ -203,15 +244,13 @@ export function AIAssistantClient() {
               onClick={() => setSidebarOpen(false)}
               className="w-full rounded-lg px-3 py-2 text-left text-xs text-gray-500 hover:bg-gray-100"
             >
-              Hide sidebar
+              {t("dashboard.aiAssistant.client.hideSidebar", "Hide sidebar")}
             </button>
           </div>
         </div>
       )}
 
-      {/* Main Chat Area */}
       <div className="flex flex-1 flex-col">
-        {/* Toggle sidebar button when hidden */}
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
@@ -221,7 +260,6 @@ export function AIAssistantClient() {
           </button>
         )}
 
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto p-6">
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center">
@@ -229,11 +267,13 @@ export function AIAssistantClient() {
                 <Bot className="h-8 w-8 text-[#0891b2]" />
               </div>
               <h2 className="mb-2 text-xl font-semibold text-gray-900">
-                How can I help you?
+                {t("dashboard.aiAssistant.client.welcomeTitle", "How can I help you?")}
               </h2>
               <p className="mb-8 max-w-md text-center text-sm text-gray-500">
-                I can search contacts, analyze your pipeline, create notes and
-                tasks, draft emails, and more.
+                {t(
+                  "dashboard.aiAssistant.client.welcomeSubtitle",
+                  "I can search contacts, analyze your pipeline, create notes and tasks, draft emails, and more."
+                )}
               </p>
               <SuggestedPrompts onSelect={handleSuggestedPrompt} />
             </div>
@@ -245,7 +285,7 @@ export function AIAssistantClient() {
               {isLoading && (
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Thinking...</span>
+                  <span>{t("dashboard.aiAssistant.client.thinking", "Thinking...")}</span>
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -253,7 +293,6 @@ export function AIAssistantClient() {
           )}
         </div>
 
-        {/* Input */}
         <div className="border-t border-gray-200 bg-white p-4">
           <form
             onSubmit={handleFormSubmit}
@@ -262,8 +301,11 @@ export function AIAssistantClient() {
             <div className="relative flex-1">
               <input
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Ask about your CRM data..."
+                onChange={(event) => setInputValue(event.target.value)}
+                placeholder={t(
+                  "dashboard.aiAssistant.client.inputPlaceholder",
+                  "Ask about your CRM data..."
+                )}
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 pr-12 text-sm focus:border-[#0891b2] focus:outline-none focus:ring-1 focus:ring-[#0891b2]"
                 disabled={isLoading}
               />
@@ -281,7 +323,10 @@ export function AIAssistantClient() {
             </button>
           </form>
           <p className="mx-auto mt-2 max-w-3xl text-center text-xs text-gray-400">
-            F-CORE Copilot can make mistakes. Verify important information.
+            {t(
+              "dashboard.aiAssistant.client.disclaimer",
+              "F-CORE Copilot can make mistakes. Verify important information."
+            )}
           </p>
         </div>
       </div>

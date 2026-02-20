@@ -3,6 +3,7 @@ import Link from "next/link";
 import prisma from "@/lib/prisma";
 import SearchInput from "@/components/crm/SearchInput";
 import { Prisma } from "@prisma/client";
+import { getServerI18n } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -32,38 +33,57 @@ export default async function CompaniesPage({
 }: {
   searchParams: Promise<{ search?: string }>;
 }) {
+  const { t } = await getServerI18n();
   const { search } = await searchParams;
   const companies = await getCompanies(search);
+
+  const typeLabelByValue: Record<string, string> = {
+    partner: t("dashboard.companies.types.partner", "Partner"),
+    prospect: t("dashboard.companies.types.prospect", "Prospect"),
+    reseller: t("dashboard.companies.types.reseller", "Reseller"),
+    vendor: t("dashboard.companies.types.vendor", "Vendor"),
+  };
 
   return (
     <div className="p-6 pt-8">
       {/* Page Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Companies</h1>
-          <p className="text-gray-600 mt-1">{companies.length} companies</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {t("dashboard.companies.title", "Companies")}
+          </h1>
+          <p className="text-gray-600 mt-1">
+            {t("dashboard.companies.countLabel", "{count} companies", {
+              count: companies.length,
+            })}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <button className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
             <Download className="w-4 h-4" />
-            Export
+            {t("dashboard.companies.export", "Export")}
           </button>
           <Link
             href="/companies/new"
             className="flex items-center gap-2 px-4 py-2 bg-[#0891b2] text-white rounded-lg hover:bg-[#0ea5e9] transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Create company
+            {t("dashboard.companies.createCompany", "Create company")}
           </Link>
         </div>
       </div>
 
       {/* Filters Bar */}
       <div className="flex items-center gap-4 mb-6">
-        <SearchInput placeholder="Search companies..." />
+        <SearchInput
+          placeholder={t(
+            "dashboard.companies.searchPlaceholder",
+            "Search companies..."
+          )}
+        />
         <button className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
           <Filter className="w-4 h-4" />
-          Filters
+          {t("dashboard.companies.filters", "Filters")}
         </button>
       </div>
 
@@ -79,22 +99,22 @@ export default async function CompaniesPage({
                 />
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name
+                {t("dashboard.companies.table.name", "Name")}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Domain
+                {t("dashboard.companies.table.domain", "Domain")}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Industry
+                {t("dashboard.companies.table.industry", "Industry")}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
+                {t("dashboard.companies.table.type", "Type")}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Size
+                {t("dashboard.companies.table.size", "Size")}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Owner
+                {t("dashboard.companies.table.owner", "Owner")}
               </th>
               <th className="w-12 px-4 py-3"></th>
             </tr>
@@ -151,7 +171,8 @@ export default async function CompaniesPage({
                         : "bg-gray-50 text-gray-700"
                     }`}
                   >
-                    {company.type || "other"}
+                    {typeLabelByValue[company.type || ""] ||
+                      t("dashboard.companies.types.other", "Other")}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">
@@ -174,7 +195,11 @@ export default async function CompaniesPage({
           <div className="text-center py-12">
             <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">
-              {search ? `No companies matching "${search}"` : "No companies found"}
+              {search
+                ? t("dashboard.companies.empty.noMatch", 'No companies matching "{search}"', {
+                    search,
+                  })
+                : t("dashboard.companies.empty.noCompanies", "No companies found")}
             </p>
             {!search && (
               <Link
@@ -182,7 +207,7 @@ export default async function CompaniesPage({
                 className="inline-flex items-center gap-2 mt-4 text-[#0891b2] hover:text-[#0ea5e9]"
               >
                 <Plus className="w-4 h-4" />
-                Create your first company
+                {t("dashboard.companies.empty.createFirst", "Create your first company")}
               </Link>
             )}
           </div>
