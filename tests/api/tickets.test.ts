@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMockRequest, createMockParams, getResponseBody } from "../helpers/mock-request";
 import prisma from "@/lib/prisma";
 import { getTenantId, checkOwnership, getCurrentUser } from "@/lib/auth-helpers";
+import {
+  resetServiceRoutingStoreForTests,
+  setServiceRoutingPolicy,
+} from "@/lib/service-routing-store";
 
 import { GET as listTickets, POST as createTicket } from "@/app/api/tickets/route";
 import {
@@ -43,8 +47,9 @@ const sampleTicket = {
   deletedAt: null,
 };
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
+  await resetServiceRoutingStoreForTests();
   mockGetTenantId.mockResolvedValue(TENANT_ID);
   mockCheckOwnership.mockResolvedValue(true);
   mockGetCurrentUser.mockResolvedValue({
@@ -69,6 +74,7 @@ describe("GET /api/tickets", () => {
     expect(response.status).toBe(200);
     expect(body.data).toHaveLength(1);
     expect(body.data[0].subject).toBe("Login button broken");
+    expect(body.data[0].sla).toBeDefined();
   });
 
   it("should filter by status", async () => {
@@ -144,6 +150,15 @@ describe("POST /api/tickets", () => {
 
     expect(response.status).toBe(201);
     expect(body.subject).toBe("Login button broken");
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "created",
+          entity: "ticket",
+          entityId: "ticket-1",
+        }),
+      })
+    );
   });
 
   it("should return 400 when subject is missing (Zod validation)", async () => {
@@ -158,6 +173,7 @@ describe("POST /api/tickets", () => {
 
   it("should set createdById from authenticated user", async () => {
     mockPrisma.ticket.create.mockResolvedValue(sampleTicket);
+    mockPrisma.user.findMany.mockResolvedValue([]);
 
     const request = createMockRequest("/api/tickets", {
       method: "POST",
@@ -168,6 +184,57 @@ describe("POST /api/tickets", () => {
     const createCall = mockPrisma.ticket.create.mock.calls[0][0];
     expect(createCall?.data.createdById).toBe("user-test-id");
     expect(createCall?.data.tenantId).toBe(TENANT_ID);
+    expect(createCall?.data.dueDate).toBeInstanceOf(Date);
+  });
+
+  it("should auto-assign based on routing rules when assignee is not provided", async () => {
+    await setServiceRoutingPolicy(TENANT_ID, {
+      teams: [{ id: "urgent-team", name: "Urgent Team", assigneeIds: ["agent-1"] }],
+      businessHours: {
+        timezone: "UTC",
+        weekdays: [1, 2, 3, 4, 5],
+        startHour: 0,
+        endHour: 24,
+      },
+      priorityRules: {
+        low: { teamId: "urgent-team" },
+        medium: { teamId: "urgent-team" },
+        high: { teamId: "urgent-team" },
+        urgent: { teamId: "urgent-team" },
+      },
+      channelRules: {
+        email: { teamId: null },
+        phone: { teamId: null },
+        web: { teamId: null },
+        chat: { teamId: null },
+      },
+      offHoursTeamId: null,
+      fallbackAssigneeId: null,
+    });
+
+    mockPrisma.user.findMany.mockResolvedValue([
+      {
+        id: "agent-1",
+        role: "member",
+        availability: [],
+      },
+    ] as any);
+    mockPrisma.ticket.create.mockResolvedValue({
+      ...sampleTicket,
+      assigneeId: "agent-1",
+      assignee: { id: "agent-1", name: "Agent One" },
+    } as any);
+
+    const request = createMockRequest("/api/tickets", {
+      method: "POST",
+      body: { subject: "Urgent issue", priority: "urgent", source: "web" },
+    });
+
+    const response = await createTicket(request);
+    expect(response.status).toBe(201);
+
+    const createCall = mockPrisma.ticket.create.mock.calls[0][0];
+    expect(createCall?.data.assigneeId).toBe("agent-1");
   });
 
   it("should return 400 for invalid category", async () => {
@@ -195,6 +262,7 @@ describe("GET /api/tickets/[id]", () => {
 
     expect(response.status).toBe(200);
     expect(body.id).toBe("ticket-1");
+    expect(body.sla).toBeDefined();
   });
 
   it("should return 404 when ticket not found", async () => {
@@ -237,6 +305,15 @@ describe("PATCH /api/tickets/[id]", () => {
 
     expect(response.status).toBe(200);
     expect(body.priority).toBe("urgent");
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "updated",
+          entity: "ticket",
+          entityId: "ticket-1",
+        }),
+      })
+    );
   });
 
   it("should set resolvedAt when status changes to resolved", async () => {
@@ -252,6 +329,40 @@ describe("PATCH /api/tickets/[id]", () => {
 
     const updateCall = mockPrisma.ticket.update.mock.calls[0][0];
     expect(updateCall?.data).toHaveProperty("resolvedAt");
+    expect(updateCall?.data).toHaveProperty("firstResponseAt");
+  });
+
+  it("should create survey invitation activity when resolving ticket with contact", async () => {
+    const withContact = { ...sampleTicket, contactId: "contact-1", status: "open" };
+    mockPrisma.ticket.findFirst.mockResolvedValue(withContact as any);
+    mockPrisma.ticket.update.mockResolvedValue({ ...withContact, status: "resolved" } as any);
+    mockPrisma.contact.findFirst.mockResolvedValue({
+      id: "contact-1",
+      email: "contact@example.com",
+    } as any);
+    mockPrisma.activity.findMany.mockResolvedValue([]);
+    mockPrisma.activity.create.mockResolvedValue({ id: "activity-1" } as any);
+
+    const request = createMockRequest("/api/tickets/ticket-1", {
+      method: "PATCH",
+      body: { status: "resolved" },
+    });
+    const params = createMockParams({ id: "ticket-1" });
+    const response = await updateTicket(request, params);
+
+    expect(response.status).toBe(200);
+    expect(mockPrisma.activity.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          contactId: "contact-1",
+          metadata: expect.objectContaining({
+            source: "service_survey",
+            status: "sent",
+            ticketId: "ticket-1",
+          }),
+        }),
+      })
+    );
   });
 
   it("should set closedAt when status changes to closed", async () => {
@@ -301,6 +412,15 @@ describe("DELETE /api/tickets/[id]", () => {
 
     const updateCall = mockPrisma.ticket.update.mock.calls[0][0];
     expect(updateCall?.data.deletedAt).toBeInstanceOf(Date);
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "deleted",
+          entity: "ticket",
+          entityId: "ticket-1",
+        }),
+      })
+    );
   });
 
   it("should return 404 when ticket not found", async () => {

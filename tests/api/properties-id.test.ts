@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMockRequest, createMockParams, getResponseBody } from "../helpers/mock-request";
 import prisma from "@/lib/prisma";
-import { getTenantId, checkOwnership } from "@/lib/auth-helpers";
+import { getTenantId, checkOwnership, checkPermission } from "@/lib/auth-helpers";
 
 import {
   GET as getProperty,
@@ -12,6 +12,7 @@ import {
 const mockPrisma = vi.mocked(prisma);
 const mockGetTenantId = vi.mocked(getTenantId);
 const mockCheckOwnership = vi.mocked(checkOwnership);
+const mockCheckPermission = vi.mocked(checkPermission);
 
 const TENANT_ID = "tenant-test-id";
 
@@ -37,6 +38,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockGetTenantId.mockResolvedValue(TENANT_ID);
   mockCheckOwnership.mockResolvedValue(undefined);
+  mockCheckPermission.mockResolvedValue(true);
 });
 
 // =============================================================================
@@ -71,6 +73,17 @@ describe("GET /api/properties/[id]", () => {
 
     expect(mockCheckOwnership).toHaveBeenCalledWith(TENANT_ID, request);
   });
+
+  it("should return 403 when missing settings.read permission", async () => {
+    mockCheckPermission.mockRejectedValue(
+      new Error("Forbidden: Missing permission settings.read")
+    );
+
+    const request = createMockRequest("/api/properties/prop-1");
+    const response = await getProperty(request, createMockParams({ id: "prop-1" }));
+
+    expect(response.status).toBe(403);
+  });
 });
 
 // =============================================================================
@@ -93,6 +106,15 @@ describe("PATCH /api/properties/[id]", () => {
 
     expect(response.status).toBe(200);
     expect(body.label).toBe("Updated Label");
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "updated",
+          entity: "property_definition",
+          entityId: "prop-1",
+        }),
+      })
+    );
   });
 
   it("should return 404 when not found", async () => {
@@ -119,6 +141,20 @@ describe("PATCH /api/properties/[id]", () => {
 
     expect(mockCheckOwnership).toHaveBeenCalledWith(TENANT_ID, request);
   });
+
+  it("should return 403 when missing settings.manage permission", async () => {
+    mockCheckPermission.mockRejectedValue(
+      new Error("Forbidden: Missing permission settings.manage")
+    );
+
+    const request = createMockRequest("/api/properties/prop-1", {
+      method: "PATCH",
+      body: { label: "Updated" },
+    });
+    const response = await updateProperty(request, createMockParams({ id: "prop-1" }));
+
+    expect(response.status).toBe(403);
+  });
 });
 
 // =============================================================================
@@ -140,6 +176,15 @@ describe("DELETE /api/properties/[id]", () => {
     expect(mockPrisma.propertyDefinition.delete).toHaveBeenCalledWith({
       where: { id: "prop-1" },
     });
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "deleted",
+          entity: "property_definition",
+          entityId: "prop-1",
+        }),
+      })
+    );
   });
 
   it("should return 400 when trying to delete system property", async () => {

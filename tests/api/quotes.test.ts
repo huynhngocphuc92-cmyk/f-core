@@ -132,6 +132,15 @@ describe("POST /api/quotes", () => {
 
     expect(response.status).toBe(201);
     expect(body.title).toBe("Enterprise License");
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "created",
+          entity: "quote",
+          entityId: "quote-1",
+        }),
+      })
+    );
   });
 
   it("should set ownerId from authenticated user", async () => {
@@ -256,6 +265,15 @@ describe("PATCH /api/quotes/[id]", () => {
 
     expect(response.status).toBe(200);
     expect(body.title).toBe("Updated Quote");
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "updated",
+          entity: "quote",
+          entityId: "quote-1",
+        }),
+      })
+    );
   });
 
   it("should set sentAt when status changes from draft to pending", async () => {
@@ -344,6 +362,15 @@ describe("DELETE /api/quotes/[id]", () => {
 
     const updateCall = mockPrisma.quote.update.mock.calls[0][0];
     expect(updateCall?.data.deletedAt).toBeInstanceOf(Date);
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "deleted",
+          entity: "quote",
+          entityId: "quote-1",
+        }),
+      })
+    );
   });
 
   it("should return 404 when quote not found", async () => {

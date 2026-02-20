@@ -5,33 +5,37 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
+import { useI18n } from "@/i18n/I18nProvider";
 import { Mail, Loader2, ArrowLeft } from "lucide-react";
 
 export default function ForgotPasswordPage() {
+  const { t } = useI18n();
+
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError("");
     setLoading(true);
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
       });
 
-      if (error) {
-        setError(error.message);
+      if (resetError) {
+        setError(resetError.message);
         return;
       }
 
       setSuccess(true);
     } catch {
-      setError("An unexpected error occurred");
+      setError(t("auth.errors.unexpected", "An unexpected error occurred"));
     } finally {
       setLoading(false);
     }
@@ -58,17 +62,17 @@ export default function ForgotPasswordPage() {
               </svg>
             </div>
             <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-              Check your email
+              {t("auth.forgotPassword.checkEmailTitle", "Check your email")}
             </h1>
             <p className="text-gray-600 mb-6">
-              We&apos;ve sent a password reset link to <strong>{email}</strong>.
-              Click the link to reset your password.
+              {t(
+                "auth.forgotPassword.checkEmailMessage",
+                "We've sent a password reset link to {email}. Click the link to reset your password.",
+                { email }
+              )}
             </p>
-            <Link
-              href="/login"
-              className="text-[#0891b2] hover:text-[#0ea5e9] font-medium"
-            >
-              Back to sign in
+            <Link href="/login" className="text-[#0891b2] hover:text-[#0ea5e9] font-medium">
+              {t("common.backToSignIn", "Back to sign in")}
             </Link>
           </div>
         </div>
@@ -85,60 +89,52 @@ export default function ForgotPasswordPage() {
             <div className="w-10 h-10 rounded-lg bg-[#0891b2] flex items-center justify-center">
               <span className="text-white font-bold text-lg">F</span>
             </div>
-            <span className="text-2xl font-bold text-gray-900">F-CORE</span>
+            <span className="text-2xl font-bold text-gray-900">{t("common.appName", "F-CORE")}</span>
           </div>
           <h1 className="text-2xl font-semibold text-gray-900">
-            Forgot your password?
+            {t("auth.forgotPassword.title", "Forgot your password?")}
           </h1>
           <p className="text-gray-600 mt-1">
-            Enter your email and we&apos;ll send you a reset link
+            {t("auth.forgotPassword.subtitle", "Enter your email and we'll send you a reset link")}
           </p>
+          <div className="mt-4 max-w-[220px] mx-auto">
+            <LanguageSwitcher />
+          </div>
         </div>
 
         {/* Form */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
-            {error && (
-              <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm">
-                {error}
-              </div>
-            )}
+            {error && <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm">{error}</div>}
 
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <Input
                 type="email"
-                placeholder="Email address"
+                placeholder={t("auth.forgotPassword.emailPlaceholder", "Email address")}
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
                 className="pl-10"
                 required
               />
             </div>
 
-            <Button
-              type="submit"
-              className="w-full bg-[#0891b2] hover:bg-[#0ea5e9]"
-              disabled={loading}
-            >
+            <Button type="submit" className="w-full bg-[#0891b2] hover:bg-[#0ea5e9]" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Sending...
+                  {t("auth.forgotPassword.sending", "Sending...")}
                 </>
               ) : (
-                "Send reset link"
+                t("auth.forgotPassword.sendResetLink", "Send reset link")
               )}
             </Button>
           </form>
 
           <div className="mt-6 text-center">
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-            >
+            <Link href="/login" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
               <ArrowLeft className="w-4 h-4" />
-              Back to sign in
+              {t("common.backToSignIn", "Back to sign in")}
             </Link>
           </div>
         </div>

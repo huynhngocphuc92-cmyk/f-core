@@ -9,6 +9,7 @@ export function createMockRequest(
     method?: string;
     body?: Record<string, unknown>;
     searchParams?: Record<string, string>;
+    headers?: Record<string, string>;
   }
 ): NextRequest {
   const baseUrl = "http://localhost:3000";
@@ -20,11 +21,14 @@ export function createMockRequest(
     }
   }
 
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options?.headers || {}),
+  };
+
   const init: RequestInit = {
     method: options?.method || "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
   };
 
   if (options?.body) {

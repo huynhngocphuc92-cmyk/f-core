@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMockRequest, getResponseBody } from "../helpers/mock-request";
 import prisma from "@/lib/prisma";
-import { getTenantId } from "@/lib/auth-helpers";
+import { getTenantId, checkPermission } from "@/lib/auth-helpers";
 
 import { GET as listProperties, POST as createProperty } from "@/app/api/properties/route";
 
 const mockPrisma = vi.mocked(prisma);
 const mockGetTenantId = vi.mocked(getTenantId);
+const mockCheckPermission = vi.mocked(checkPermission);
 
 const TENANT_ID = "tenant-test-id";
 
@@ -31,6 +32,7 @@ const sampleProperty = {
 beforeEach(() => {
   vi.clearAllMocks();
   mockGetTenantId.mockResolvedValue(TENANT_ID);
+  mockCheckPermission.mockResolvedValue(true);
 });
 
 // =============================================================================
@@ -65,6 +67,19 @@ describe("GET /api/properties", () => {
       objectType: "contact",
     });
   });
+
+  it("should return 403 when missing settings.read permission", async () => {
+    mockCheckPermission.mockRejectedValue(
+      new Error("Forbidden: Missing permission settings.read")
+    );
+
+    const request = createMockRequest("/api/properties");
+    const response = await listProperties(request);
+    const body = await getResponseBody(response);
+
+    expect(response.status).toBe(403);
+    expect(body.error).toMatch(/missing permission/i);
+  });
 });
 
 // =============================================================================
@@ -90,6 +105,15 @@ describe("POST /api/properties", () => {
 
     expect(response.status).toBe(201);
     expect(body.name).toBe("custom_field");
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "created",
+          entity: "property_definition",
+          entityId: "prop-1",
+        }),
+      })
+    );
   });
 
   it("should return 409 when property already exists", async () => {
@@ -174,5 +198,26 @@ describe("POST /api/properties", () => {
     const response = await createProperty(request);
 
     expect(response.status).toBe(400);
+  });
+
+  it("should return 403 when missing settings.manage permission", async () => {
+    mockCheckPermission.mockRejectedValue(
+      new Error("Forbidden: Missing permission settings.manage")
+    );
+
+    const request = createMockRequest("/api/properties", {
+      method: "POST",
+      body: {
+        name: "field",
+        label: "Field",
+        objectType: "contact",
+        fieldType: "text",
+      },
+    });
+    const response = await createProperty(request);
+    const body = await getResponseBody(response);
+
+    expect(response.status).toBe(403);
+    expect(body.error).toMatch(/missing permission/i);
   });
 });

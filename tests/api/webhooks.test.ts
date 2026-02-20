@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMockRequest, getResponseBody } from "../helpers/mock-request";
 import prisma from "@/lib/prisma";
-import { getTenantId, getCurrentUser } from "@/lib/auth-helpers";
+import { getTenantId, getCurrentUser, checkPermission } from "@/lib/auth-helpers";
 
 import { GET as listWebhooks, POST as createWebhook } from "@/app/api/webhooks/route";
 
 const mockPrisma = vi.mocked(prisma);
 const mockGetTenantId = vi.mocked(getTenantId);
 const mockGetCurrentUser = vi.mocked(getCurrentUser);
+const mockCheckPermission = vi.mocked(checkPermission);
 
 const TENANT_ID = "tenant-test-id";
 
@@ -30,6 +31,7 @@ const sampleWebhook = {
 beforeEach(() => {
   vi.clearAllMocks();
   mockGetTenantId.mockResolvedValue(TENANT_ID);
+  mockCheckPermission.mockResolvedValue(true);
   mockGetCurrentUser.mockResolvedValue({
     id: "user-test-id",
     email: "test@example.com",
@@ -53,6 +55,15 @@ describe("GET /api/webhooks", () => {
     expect(body.data).toHaveLength(1);
     expect(body.data[0].name).toBe("New Contact Hook");
   });
+
+  it("should return 403 when missing settings.read permission", async () => {
+    mockCheckPermission.mockRejectedValue(
+      new Error("Forbidden: Missing permission settings.read")
+    );
+
+    const response = await listWebhooks(createMockRequest("/api/webhooks"));
+    expect(response.status).toBe(403);
+  });
 });
 
 // =============================================================================
@@ -75,6 +86,15 @@ describe("POST /api/webhooks", () => {
 
     expect(response.status).toBe(201);
     expect(body.name).toBe("New Contact Hook");
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "created",
+          entity: "webhook",
+          entityId: "wh-1",
+        }),
+      })
+    );
   });
 
   it("should set userId from authenticated user", async () => {
@@ -142,5 +162,22 @@ describe("POST /api/webhooks", () => {
     const response = await createWebhook(request);
 
     expect(response.status).toBe(400);
+  });
+
+  it("should return 403 when missing settings.manage permission", async () => {
+    mockCheckPermission.mockRejectedValue(
+      new Error("Forbidden: Missing permission settings.manage")
+    );
+
+    const request = createMockRequest("/api/webhooks", {
+      method: "POST",
+      body: {
+        name: "Hook",
+        url: "https://example.com/hook",
+        events: ["contact.created"],
+      },
+    });
+    const response = await createWebhook(request);
+    expect(response.status).toBe(403);
   });
 });

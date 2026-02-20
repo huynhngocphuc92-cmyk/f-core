@@ -126,6 +126,15 @@ describe("POST /api/workflows", () => {
 
     expect(response.status).toBe(201);
     expect(body.name).toBe("Welcome Email");
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "created",
+          entity: "workflow",
+          entityId: "workflow-1",
+        }),
+      })
+    );
   });
 
   it("should set ownerId from authenticated user", async () => {
@@ -232,6 +241,15 @@ describe("PATCH /api/workflows/[id]", () => {
 
     expect(response.status).toBe(200);
     expect(body.name).toBe("Updated Workflow");
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "updated",
+          entity: "workflow",
+          entityId: "workflow-1",
+        }),
+      })
+    );
   });
 
   it("should return 404 when workflow not found", async () => {
@@ -268,6 +286,15 @@ describe("DELETE /api/workflows/[id]", () => {
     expect(updateCall?.data.deletedAt).toBeInstanceOf(Date);
     expect(updateCall?.data.isActive).toBe(false);
     expect(updateCall?.data.status).toBe("draft");
+    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "deleted",
+          entity: "workflow",
+          entityId: "workflow-1",
+        }),
+      })
+    );
   });
 
   it("should return 404 when workflow not found", async () => {
